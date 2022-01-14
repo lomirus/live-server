@@ -7,7 +7,6 @@ use tide::{prelude::*, Request, Response, StatusCode};
 use tide_websockets::{WebSocket, WebSocketConnection};
 use uuid::Uuid;
 
-const BASE_URL: &str = "./public";
 const SCRIPT: &str = r#"
     const ws = new WebSocket("ws://localhost:8080/live-server-ws");
     ws.onopen = () => console.log("[Live Server] Connection Established");
@@ -44,12 +43,12 @@ pub async fn serve() {
 }
 
 async fn static_assets(req: Request<()>) -> tide::Result {
-    let path = req.url().path();
-    let path = match path {
-        "/" => "/index.html",
-        _ => path,
-    };
-    let path = format!("{}{}", BASE_URL, path);
+    let mut path = req.url().path().to_string();
+    if path.ends_with("/") {
+        path = format!(".{}index.html", path);
+    } else {
+        path = format!(".{}", path);
+    }
 
     let head_selector = Selector::from("head");
     let script = Node::new_element("script", vec![], vec![Node::Text(SCRIPT.to_string())]);
