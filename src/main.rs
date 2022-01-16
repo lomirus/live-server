@@ -9,6 +9,7 @@ use std::{collections::HashMap, thread};
 use tide_websockets::WebSocketConnection;
 use uuid::Uuid;
 
+/// Launch a local network server with live reload feature for static pages.
 #[derive(Parser)]
 struct Args {
     #[clap(short, long, default_value_t = 8000)]
