@@ -1,10 +1,11 @@
 use async_std::prelude::*;
+use colored::Colorize;
 use html_editor::{parse, Editable, Htmlifiable, Selector};
+use local_ip_address::local_ip;
 use std::fs;
 use tide::{prelude::*, Request, Response, StatusCode};
 use tide_websockets::WebSocket;
 use uuid::Uuid;
-use local_ip_address::local_ip;
 
 use crate::{PORT, SCRIPT, WS_CLIENTS};
 
@@ -29,7 +30,10 @@ pub async fn serve() {
         .bind(format!("{}:{}", host, port))
         .await
         .expect("Failed to bind host and port");
-    println!(" Server listening on http://{}:{}/", host, port);
+    println!(
+        " Server listening on {}",
+        format!("http://{}:{}/", host, port).blue()
+    );
     listener.accept().await.unwrap();
 }
 
@@ -47,7 +51,8 @@ async fn static_assets(req: Request<()>) -> tide::Result {
     let file = match fs::read(&path) {
         Ok(file) => file,
         Err(err) => {
-            eprintln!(r#"[ERROR] Not Found: "{}""#, path);
+            let error = format!(r#"[ERROR] Not Found: "{}""#, path);
+            eprintln!("{}", error.red());
             return Err(tide::Error::new(StatusCode::NotFound, err));
         }
     };

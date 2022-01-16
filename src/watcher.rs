@@ -1,3 +1,4 @@
+use colored::Colorize;
 use notify::{watcher, DebouncedEvent, RecursiveMode, Watcher};
 use std::{env::current_dir, path::PathBuf, sync::mpsc::channel, time::Duration};
 use tide_websockets::Message;
@@ -28,7 +29,7 @@ async fn broadcast() {
 pub async fn watch() {
     println!(
         "Watcher listening on {}",
-        current_dir().unwrap().into_os_string().to_str().unwrap()
+        current_dir().unwrap().into_os_string().to_str().unwrap().blue()
     );
     let (tx, rx) = channel();
     let mut watcher = watcher(tx, Duration::from_millis(100)).unwrap();
@@ -43,29 +44,33 @@ pub async fn watch() {
             Ok(event) => match event {
                 Create(path) => {
                     let path = get_rltv_path(path);
-                    println!("[CREATE] {:?}", path);
+                    let info = format!("[CREATE] {:?}", path);
+                    println!("{}", info.bright_black());
                     broadcast().await;
                 }
                 Write(path) => {
                     let path = get_rltv_path(path);
-                    println!("[UPDATE] {:?}", path);
+                    let info = format!("[UPDATE] {:?}", path);
+                    println!("{}", info.bright_black());
                     broadcast().await;
                 }
                 Remove(path) => {
                     let path = get_rltv_path(path);
-                    println!("[REMOVE] {:?}", path);
+                    let info = format!("[REMOVE] {:?}", path);
+                    println!("{}", info.bright_black());
                     broadcast().await;
                 }
                 Rename(from, to) => {
                     let from = get_rltv_path(from);
                     let to = get_rltv_path(to);
-                    println!("[RENAME] {:?} -> {:?}", from, to);
+                    let info = format!("[RENAME] {:?} -> {:?}", from, to);
+                    println!("{}", info.bright_black());
                     broadcast().await;
                 }
-                Error(err, _) => println!("{}", err),
+                Error(err, _) => println!("{}", err.to_string().red()),
                 _ => {}
             },
-            Err(err) => println!("{}", err),
+            Err(err) => println!("{}", err.to_string().red()),
         }
     }
 }
