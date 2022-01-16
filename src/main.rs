@@ -1,12 +1,13 @@
 mod server;
 mod watcher;
 
-use async_std::{task::block_on, sync::Mutex};
+use async_std::{sync::Mutex, task::block_on};
 use clap::Parser;
-use once_cell::sync::{OnceCell, Lazy};
+use html_editor::Node;
+use once_cell::sync::{Lazy, OnceCell};
+use std::{collections::HashMap, thread};
 use tide_websockets::WebSocketConnection;
 use uuid::Uuid;
-use std::{thread, collections::HashMap};
 
 #[derive(Parser)]
 struct Args {
@@ -14,7 +15,7 @@ struct Args {
     port: u16,
 }
 
-pub static SCRIPT: OnceCell<String> = OnceCell::new();
+pub static SCRIPT: OnceCell<Node> = OnceCell::new();
 pub static PORT: OnceCell<u16> = OnceCell::new();
 pub static HOST: OnceCell<&str> = OnceCell::new();
 pub static WS_CLIENTS: Lazy<Mutex<HashMap<Uuid, WebSocketConnection>>> =
@@ -26,12 +27,20 @@ async fn main() {
 
     HOST.set("127.0.0.1").unwrap();
     PORT.set(args.port).unwrap();
-    SCRIPT.set(format!(r#"
-        const ws = new WebSocket("ws://localhost:{}/live-server-ws");
-        ws.onopen = () => console.log("[Live Server] Connection Established");
-        ws.onmessage = () => location.reload();
-        ws.onclose = () => console.log("[Live Server] Connection Closed");
-    "#, PORT.get().unwrap())).unwrap();
+    SCRIPT
+        .set({
+            let script = format!(
+                r#"
+                    const ws = new WebSocket("ws://localhost:{}/live-server-ws");
+                    ws.onopen = () => console.log("[Live Server] Connection Established");
+                    ws.onmessage = () => location.reload();
+                    ws.onclose = () => console.log("[Live Server] Connection Closed");
+                "#,
+                PORT.get().unwrap()
+            );
+            Node::new_element("script", vec![], vec![Node::Text(script)])
+        })
+        .unwrap();
 
     thread::spawn(|| block_on(watcher::watch()));
     server::serve().await;

@@ -1,5 +1,5 @@
 use async_std::prelude::*;
-use html_editor::{parse, Editable, Htmlifiable, Node, Selector};
+use html_editor::{parse, Editable, Htmlifiable, Selector};
 use std::fs;
 use tide::{prelude::*, Request, Response, StatusCode};
 use tide_websockets::WebSocket;
@@ -33,17 +33,16 @@ pub async fn serve() {
 }
 
 async fn static_assets(req: Request<()>) -> tide::Result {
+    // Get the path and mime of the static file.
     let mut path = req.url().path().to_string();
-    if path.ends_with("/") {
-        path = format!(".{}index.html", path);
+    path = if path.ends_with("/") {
+        format!(".{}index.html", path)
     } else {
-        path = format!(".{}", path);
-    }
+        format!(".{}", path)
+    };
+    let mime = mime_guess::from_path(&path).first_or_text_plain();
 
-    let head_selector = Selector::from("head");
-    let script = SCRIPT.get().unwrap().to_string();
-    let script = Node::new_element("script", vec![], vec![Node::Text(script)]);
-
+    // Read the file.
     let file = match fs::read(&path) {
         Ok(file) => file,
         Err(err) => {
@@ -51,11 +50,19 @@ async fn static_assets(req: Request<()>) -> tide::Result {
             return Err(tide::Error::new(StatusCode::NotFound, err));
         }
     };
-    let html: String = String::from_utf8_lossy(&file).parse::<String>()?;
-    let html = parse(html.as_str())
-        .insert_to(&head_selector, script)
-        .html();
-    let mut response: Response = format!("{}\n", html).into();
-    response.set_content_type("text/html; charset=utf-8");
+    let mut file: String = String::from_utf8_lossy(&file).parse()?;
+
+    // Construct the response.
+    let mut response: Response;
+    if mime == "text/html" {
+        let head_selector = Selector::from("head");
+        let script = SCRIPT.get().unwrap().clone();
+        file = parse(file.as_str())
+            .insert_to(&head_selector, script)
+            .html();
+    }
+    response = file.into();
+    response.set_content_type(mime.to_string().as_str());
+
     Ok(response)
 }
