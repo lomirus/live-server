@@ -1,4 +1,4 @@
-use crate::{HOST, PORT};
+use crate::{HOST, PORT, SCRIPT};
 use async_std::{prelude::*, sync::Mutex};
 use html_editor::{parse, Editable, Htmlifiable, Node, Selector};
 use once_cell::sync::Lazy;
@@ -6,13 +6,6 @@ use std::{collections::HashMap, fs};
 use tide::{prelude::*, Request, Response, StatusCode};
 use tide_websockets::{WebSocket, WebSocketConnection};
 use uuid::Uuid;
-
-const SCRIPT: &str = r#"
-    const ws = new WebSocket("ws://localhost:8080/live-server-ws");
-    ws.onopen = () => console.log("[Live Server] Connection Established");
-    ws.onmessage = () => location.reload();
-    ws.onclose = () => console.log("[Live Server] Connection Closed");
-"#;
 
 static WS_CLIENTS: Lazy<Mutex<HashMap<Uuid, WebSocketConnection>>> =
     Lazy::new(|| Mutex::new(HashMap::new()));
@@ -38,7 +31,7 @@ pub async fn serve() {
         .bind(format!("{}:{}", host, port))
         .await
         .expect("Failed to bind host and port");
-    println!("Server listening on http://{}:{}/", host, port);
+    println!(" Server listening on http://{}:{}/", host, port);
     listener.accept().await.unwrap();
 }
 
@@ -51,7 +44,8 @@ async fn static_assets(req: Request<()>) -> tide::Result {
     }
 
     let head_selector = Selector::from("head");
-    let script = Node::new_element("script", vec![], vec![Node::Text(SCRIPT.to_string())]);
+    let script = SCRIPT.get().unwrap().to_string();
+    let script = Node::new_element("script", vec![], vec![Node::Text(script)]);
 
     let file = match fs::read(&path) {
         Ok(file) => file,

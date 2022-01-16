@@ -12,6 +12,7 @@ struct Args {
     port: u16,
 }
 
+pub static SCRIPT: OnceCell<String> = OnceCell::new();
 pub static PORT: OnceCell<u16> = OnceCell::new();
 pub static HOST: OnceCell<&str> = OnceCell::new();
 
@@ -21,6 +22,12 @@ async fn main() {
 
     HOST.set("127.0.0.1").unwrap();
     PORT.set(args.port).unwrap();
+    SCRIPT.set(format!(r#"
+        const ws = new WebSocket("ws://localhost:{}/live-server-ws");
+        ws.onopen = () => console.log("[Live Server] Connection Established");
+        ws.onmessage = () => location.reload();
+        ws.onclose = () => console.log("[Live Server] Connection Closed");
+    "#, PORT.get().unwrap())).unwrap();
 
     thread::spawn(|| block_on(watcher::watch()));
     server::serve().await;
