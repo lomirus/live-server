@@ -2,6 +2,12 @@
 name = "live-server"
 version = "0.1.0"
 edition = "2021"
+authors = ["Lomirus"]
+description = "Launch a local network server with live reload feature for static pages."
+homepage = "https://github.com/lomirus/live-server"
+repository = "https://github.com/lomirus/live-server"
+license = "MIT"
+keywords = ["live", "server", "web"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
