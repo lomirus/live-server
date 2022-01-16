@@ -4,11 +4,12 @@ use std::fs;
 use tide::{prelude::*, Request, Response, StatusCode};
 use tide_websockets::WebSocket;
 use uuid::Uuid;
+use local_ip_address::local_ip;
 
-use crate::{HOST, PORT, SCRIPT, WS_CLIENTS};
+use crate::{PORT, SCRIPT, WS_CLIENTS};
 
 pub async fn serve() {
-    let host = HOST.get().unwrap();
+    let host = local_ip().unwrap().to_string();
     let port = PORT.get().unwrap();
     let mut app = tide::new();
     app.at("/").get(static_assets);

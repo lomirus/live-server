@@ -17,7 +17,6 @@ struct Args {
 
 pub static SCRIPT: OnceCell<Node> = OnceCell::new();
 pub static PORT: OnceCell<u16> = OnceCell::new();
-pub static HOST: OnceCell<&str> = OnceCell::new();
 pub static WS_CLIENTS: Lazy<Mutex<HashMap<Uuid, WebSocketConnection>>> =
     Lazy::new(|| Mutex::new(HashMap::new()));
 
@@ -25,7 +24,6 @@ pub static WS_CLIENTS: Lazy<Mutex<HashMap<Uuid, WebSocketConnection>>> =
 async fn main() {
     let args = Args::parse();
 
-    HOST.set("127.0.0.1").unwrap();
     PORT.set(args.port).unwrap();
     SCRIPT
         .set({
