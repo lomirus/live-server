@@ -17,7 +17,7 @@ fn get_rltv_path(path: PathBuf) -> String {
         .to_str()
         .expect("Failed to convert current directory to string")
         .len()
-        + 3;
+        + 1;
     let path = path
         .to_str()
         .expect("Failed to convert the changed file/folder path to string");
