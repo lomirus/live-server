@@ -5,6 +5,12 @@
 
 Launch a local network server with live reload feature for static pages.
 
+## Install
+
+```console
+$ cargo install live-server
+```
+
 ## Usage
 
 ```console
