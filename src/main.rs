@@ -4,6 +4,7 @@ mod watcher;
 use async_std::{sync::Mutex, task::block_on};
 use clap::Parser;
 use html_editor::Node;
+use local_ip_address::local_ip;
 use once_cell::sync::{Lazy, OnceCell};
 use std::{collections::HashMap, thread};
 use tide_websockets::WebSocketConnection;
@@ -30,11 +31,12 @@ async fn main() {
         .set({
             let script = format!(
                 r#"
-                    const ws = new WebSocket("ws://localhost:{}/live-server-ws");
+                    const ws = new WebSocket("ws://{}:{}/live-server-ws");
                     ws.onopen = () => console.log("[Live Server] Connection Established");
                     ws.onmessage = () => location.reload();
                     ws.onclose = () => console.log("[Live Server] Connection Closed");
                 "#,
+                local_ip().unwrap(),
                 PORT.get().unwrap()
             );
             Node::new_element("script", vec![], vec![Node::Text(script)])
