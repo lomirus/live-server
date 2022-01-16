@@ -1,14 +1,11 @@
-use crate::{HOST, PORT, SCRIPT};
-use async_std::{prelude::*, sync::Mutex};
+use async_std::prelude::*;
 use html_editor::{parse, Editable, Htmlifiable, Node, Selector};
-use once_cell::sync::Lazy;
-use std::{collections::HashMap, fs};
+use std::fs;
 use tide::{prelude::*, Request, Response, StatusCode};
-use tide_websockets::{WebSocket, WebSocketConnection};
+use tide_websockets::WebSocket;
 use uuid::Uuid;
 
-static WS_CLIENTS: Lazy<Mutex<HashMap<Uuid, WebSocketConnection>>> =
-    Lazy::new(|| Mutex::new(HashMap::new()));
+use crate::{HOST, PORT, SCRIPT, WS_CLIENTS};
 
 pub async fn serve() {
     let host = HOST.get().unwrap();

@@ -1,10 +1,12 @@
 mod server;
 mod watcher;
 
-use async_std::task::block_on;
+use async_std::{task::block_on, sync::Mutex};
 use clap::Parser;
-use once_cell::sync::OnceCell;
-use std::thread;
+use once_cell::sync::{OnceCell, Lazy};
+use tide_websockets::WebSocketConnection;
+use uuid::Uuid;
+use std::{thread, collections::HashMap};
 
 #[derive(Parser)]
 struct Args {
@@ -15,6 +17,8 @@ struct Args {
 pub static SCRIPT: OnceCell<String> = OnceCell::new();
 pub static PORT: OnceCell<u16> = OnceCell::new();
 pub static HOST: OnceCell<&str> = OnceCell::new();
+pub static WS_CLIENTS: Lazy<Mutex<HashMap<Uuid, WebSocketConnection>>> =
+    Lazy::new(|| Mutex::new(HashMap::new()));
 
 #[async_std::main]
 async fn main() {

@@ -1,15 +1,8 @@
-use std::{
-    collections::HashMap, env::current_dir, path::PathBuf, sync::mpsc::channel, time::Duration,
-};
-
-use async_std::sync::Mutex;
 use notify::{watcher, DebouncedEvent, RecursiveMode, Watcher};
-use once_cell::sync::Lazy;
-use tide_websockets::{Message, WebSocketConnection};
-use uuid::Uuid;
+use std::{env::current_dir, path::PathBuf, sync::mpsc::channel, time::Duration};
+use tide_websockets::Message;
 
-static WS_CLIENTS: Lazy<Mutex<HashMap<Uuid, WebSocketConnection>>> =
-    Lazy::new(|| Mutex::new(HashMap::new()));
+use crate::WS_CLIENTS;
 
 fn get_rltv_path(path: PathBuf) -> String {
     let prefix_len = current_dir()
