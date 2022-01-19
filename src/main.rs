@@ -12,6 +12,7 @@ use uuid::Uuid;
 
 /// Launch a local network server with live reload feature for static pages.
 #[derive(Parser)]
+#[clap(version)]
 struct Args {
     #[clap(short, long, default_value_t = 8000)]
     port: u16,
