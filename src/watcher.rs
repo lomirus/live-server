@@ -29,13 +29,22 @@ async fn broadcast() {
 pub async fn watch() {
     println!(
         "Watcher listening on {}",
-        current_dir().unwrap().into_os_string().to_str().unwrap().blue()
+        current_dir()
+            .unwrap()
+            .into_os_string()
+            .to_str()
+            .unwrap()
+            .blue()
     );
     let (tx, rx) = channel();
     let mut watcher = watcher(tx, Duration::from_millis(100)).unwrap();
-    watcher
-        .watch(current_dir().unwrap(), RecursiveMode::Recursive)
-        .unwrap();
+    match watcher.watch(current_dir().unwrap(), RecursiveMode::Recursive) {
+        Ok(_) => {}
+        Err(err) => {
+            let info = format!("[ERROR] Watcher: {}", err.to_string());
+            println!("{}", info.red());
+        }
+    }
 
     loop {
         use DebouncedEvent::*;
