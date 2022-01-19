@@ -68,8 +68,8 @@ async fn static_assets(req: Request<()>) -> tide::Result {
     let file = match fs::read(&path) {
         Ok(file) => file,
         Err(err) => {
-            let error = format!(r#"[ERROR] Not Found: "{}""#, path);
-            eprintln!("{}", error.red());
+            let info = format!(r#"[ERROR] Failed to read "{}": {}"#, path, err.to_string());
+            eprintln!("{}", info.red());
             return Err(tide::Error::new(StatusCode::NotFound, err));
         }
     };
