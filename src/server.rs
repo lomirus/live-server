@@ -11,25 +11,42 @@ use crate::{PORT, SCRIPT, WS_CLIENTS};
 
 pub async fn serve() {
     let host = local_ip().unwrap().to_string();
-    let port = PORT.get().unwrap();
-    let mut app = tide::new();
-    app.at("/").get(static_assets);
-    app.at("/*").get(static_assets);
-    app.at("/live-server-ws")
-        .get(WebSocket::new(|_request, mut stream| async move {
-            let uuid = Uuid::new_v4();
-            // Add the connection to clients when opening a new connection
-            WS_CLIENTS.lock().await.insert(uuid, stream.clone());
-            // Waiting for the connection to be closed
-            while let Some(Ok(_)) = stream.next().await {}
-            // Remove the connection from clients when it is closed
-            WS_CLIENTS.lock().await.remove(&uuid);
-            Ok(())
-        }));
-    let mut listener = app
-        .bind(format!("{}:{}", host, port))
-        .await
-        .expect("Failed to bind host and port");
+    let mut port = PORT.get().unwrap().clone();
+    let mut listener = loop {
+        let mut app = tide::new();
+        app.at("/").get(static_assets);
+        app.at("/*").get(static_assets);
+        app.at("/live-server-ws")
+            .get(WebSocket::new(|_request, mut stream| async move {
+                let uuid = Uuid::new_v4();
+                // Add the connection to clients when opening a new connection
+                WS_CLIENTS.lock().await.insert(uuid, stream.clone());
+                // Waiting for the connection to be closed
+                while let Some(Ok(_)) = stream.next().await {}
+                // Remove the connection from clients when it is closed
+                WS_CLIENTS.lock().await.remove(&uuid);
+                Ok(())
+            }));
+
+        match app.bind(format!("{}:{}", host, port)).await {
+            Ok(listener) => break listener,
+            Err(err) => {
+                if let std::io::ErrorKind::AddrInUse = err.kind() {
+                    let info = format!("[WARNING] Port {} is already in use", port);
+                    println!("{}", info.yellow());
+                    port += 1;
+                } else {
+                    let info = format!(
+                        "[ERROR] Failed to bind port to {}: {}",
+                        port,
+                        err.to_string()
+                    );
+                    panic!("{}", info.red());
+                }
+            }
+        }
+    };
+
     println!(
         " Server listening on {}",
         format!("http://{}:{}/", host, port).blue()
