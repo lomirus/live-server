@@ -1,40 +1,57 @@
 use async_std::prelude::*;
 use colored::Colorize;
-use html_editor::{parse, Editable, Htmlifiable, Selector};
+use html_editor::{parse, Editable, Htmlifiable, Node, Selector};
 use local_ip_address::local_ip;
+use once_cell::sync::OnceCell;
 use std::fs;
-use tide::{prelude::*, Request, Response, StatusCode};
+use tide::{listener::Listener, Request, Response, StatusCode};
 use tide_websockets::WebSocket;
 use uuid::Uuid;
 
-use crate::{PORT, SCRIPT, WS_CLIENTS};
+use crate::{PORT, WS_CLIENTS};
+
+pub static SCRIPT: OnceCell<Node> = OnceCell::new();
 
 pub async fn serve() {
     let host = local_ip().unwrap().to_string();
     let mut port = PORT.get().unwrap().clone();
-    let mut listener = loop {
-        let mut app = tide::new();
-        app.at("/").get(static_assets);
-        app.at("/*").get(static_assets);
-        app.at("/live-server-ws")
-            .get(WebSocket::new(|_request, mut stream| async move {
-                let uuid = Uuid::new_v4();
-                // Add the connection to clients when opening a new connection
-                WS_CLIENTS.lock().await.insert(uuid, stream.clone());
-                // Waiting for the connection to be closed
-                while let Some(Ok(_)) = stream.next().await {}
-                // Remove the connection from clients when it is closed
-                WS_CLIENTS.lock().await.remove(&uuid);
-                Ok(())
-            }));
+    let mut listener = create_listener(&host, &mut port).await;
 
+    init_ws_script();
+
+    let url = format!("http://{}:{}/", host, port);
+    println!(" Server listening on {}", url.blue());
+    listener.accept().await.unwrap();
+}
+
+fn create_server() -> tide::Server<()> {
+    let mut app = tide::new();
+    app.at("/").get(static_assets);
+    app.at("/*").get(static_assets);
+    app.at("/live-server-ws")
+        .get(WebSocket::new(|_request, mut stream| async move {
+            let uuid = Uuid::new_v4();
+            // Add the connection to clients when opening a new connection
+            WS_CLIENTS.lock().await.insert(uuid, stream.clone());
+            // Waiting for the connection to be closed
+            while let Some(Ok(_)) = stream.next().await {}
+            // Remove the connection from clients when it is closed
+            WS_CLIENTS.lock().await.remove(&uuid);
+            Ok(())
+        }));
+    app
+}
+
+async fn create_listener(host: &String, port: &mut u16) -> impl Listener<()> {
+    loop {
+        let app = create_server();
         match app.bind(format!("{}:{}", host, port)).await {
             Ok(listener) => break listener,
             Err(err) => {
                 if let std::io::ErrorKind::AddrInUse = err.kind() {
                     let info = format!("[WARNING] Port {} is already in use", port);
                     println!("{}", info.yellow());
-                    port += 1;
+                    *port += 1;
                 } else {
                     let info = format!(
                         "[ERROR] Failed to bind port to {}: {}",
@@ -45,13 +62,25 @@ pub async fn serve() {
                 }
             }
         }
-    };
+    }
+}
 
-    println!(
-        " Server listening on {}",
-        format!("http://{}:{}/", host, port).blue()
-    );
-    listener.accept().await.unwrap();
+fn init_ws_script() {
+    SCRIPT
+        .set({
+            let script = format!(
+                r#"
+                    const ws = new WebSocket("ws://{}:{}/live-server-ws");
+                    ws.onopen = () => console.log("[Live Server] Connection Established");
+                    ws.onmessage = () => location.reload();
+                    ws.onclose = () => console.log("[Live Server] Connection Closed");
+                "#,
+                local_ip().unwrap(),
+                PORT.get().unwrap()
+            );
+            Node::new_element("script", vec![], vec![Node::Text(script)])
+        })
+        .unwrap();
 }
 
 async fn static_assets(req: Request<()>) -> tide::Result {
