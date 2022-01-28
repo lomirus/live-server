@@ -908,9 +908,9 @@ dependencies = [
 
 [[package]]
 name = "html_editor"
-version = "0.2.0"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8256b9962f9ed69a7f9deac10d247de5110694f866c5bcc64d12c0f95b3a1861"
+checksum = "2aad5b30529e9a9e2e7368189d961d9d6d849371ff00736c620d218f9d265695"
 
 [[package]]
 name = "http"

@@ -109,7 +109,7 @@ async fn static_assets(req: Request<()>) -> tide::Result {
     if mime == "text/html" {
         let head_selector = Selector::from("head");
         let script = SCRIPT.get().unwrap().clone();
-        file = parse(file.as_str())
+        file = parse(file.as_str()).unwrap()
             .insert_to(&head_selector, script)
             .html();
     }
