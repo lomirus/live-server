@@ -12,6 +12,7 @@ use uuid::Uuid;
 #[derive(Parser)]
 #[clap(version)]
 struct Args {
+    /// Set server port
     #[clap(short, long, default_value_t = 8000)]
     port: u16,
 }
