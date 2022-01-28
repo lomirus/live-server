@@ -109,9 +109,16 @@ async fn static_assets(req: Request<()>) -> tide::Result {
     if mime == "text/html" {
         let head_selector = Selector::from("head");
         let script = SCRIPT.get().unwrap().clone();
-        file = parse(file.as_str()).unwrap()
-            .insert_to(&head_selector, script)
-            .html();
+        file = match parse(file.as_str()) {
+            Ok(mut nodes) => nodes,
+            Err(err) => {
+                let info = format!(r#"[ERROR] Failed to parse "{}": {}"#, path, err);
+                eprintln!("{}", info.red());
+                return Err(tide::Error::from_str(StatusCode::InternalServerError, err));
+            }
+        }
+        .insert_to(&head_selector, script)
+        .html();
     }
     response = file.into();
     response.set_content_type(mime.to_string().as_str());
