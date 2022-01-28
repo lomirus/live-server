@@ -1,4 +1,4 @@
-[![Crates.io](https://img.shields.io/crates/v/html_editor)](https://crates.io/crates/live-server)
+[![Crates.io](https://img.shields.io/crates/v/live-server)](https://crates.io/crates/live-server)
 ![License](https://img.shields.io/crates/l/live-server)
 
 # Live Server
