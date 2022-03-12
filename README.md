@@ -15,15 +15,16 @@ $ cargo install live-server
 
 ```console
 $ live-server --help
-live-server 0.2.1
+live-server 0.3.0
 Launch a local network server with live reload feature for static pages
 
 USAGE:
     live-server [OPTIONS]
 
 OPTIONS:
-    -h, --help           Print help information
-    -p, --port <PORT>    Set server port [default: 8000]
+    -h, --host <HOST>    Set the listener host, otherwise it will be set to the local IP address
+        --help           Print help information
+    -p, --port <PORT>    Set the listener port [default: 8000]
     -V, --version        Print version information
 ```
 
