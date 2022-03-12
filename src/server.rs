@@ -69,12 +69,7 @@ fn init_ws_script() {
     SCRIPT
         .set({
             let script = format!(
-                r#"
-                    const ws = new WebSocket("ws://{}:{}/live-server-ws");
-                    ws.onopen = () => console.log("[Live Server] Connection Established");
-                    ws.onmessage = () => location.reload();
-                    ws.onclose = () => console.log("[Live Server] Connection Closed");
-                "#,
+                include_str!("scripts/websocket.js"),
                 local_ip().unwrap(),
                 PORT.get().unwrap()
             );
