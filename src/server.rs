@@ -3,7 +3,7 @@ use colored::Colorize;
 use html_editor::{parse, Editable, Htmlifiable, Node, Selector};
 use local_ip_address::local_ip;
 use once_cell::sync::OnceCell;
-use std::fs;
+use std::{fs, process::exit};
 use tide::{listener::Listener, Request, Response, StatusCode};
 use tide_websockets::WebSocket;
 use uuid::Uuid;
@@ -64,11 +64,13 @@ async fn create_listener(host: &String, port: &mut u16) -> impl Listener<()> {
                     *port += 1;
                 } else {
                     let info = format!(
-                        "[ERROR] Failed to bind port to {}: {}",
+                        "[PANIC] Failed to listen on {}:{}: {}",
+                        host,
                         port,
                         err.to_string()
                     );
-                    panic!("{}", info.red());
+                    eprintln!("{}", info.red());
+                    exit(-1);
                 }
             }
         }
