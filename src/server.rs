@@ -18,8 +18,8 @@ pub async fn serve() {
 
     // Here we can call `unwrap()` safely because we have set it
     // before calling `serve()`
-    let mut port = PORT.get().unwrap().clone();
-    let mut listener = create_listener(&host, &mut port).await;
+    let mut port = *PORT.get().unwrap();
+    let mut listener = create_listener(host, &mut port).await;
 
     init_ws_script();
 
@@ -58,12 +58,7 @@ async fn create_listener(host: &String, port: &mut u16) -> impl Listener<()> {
                     println!("{}", info.yellow());
                     *port += 1;
                 } else {
-                    let info = format!(
-                        "[PANIC] Failed to listen on {}:{}: {}",
-                        host,
-                        port,
-                        err.to_string()
-                    );
+                    let info = format!("[PANIC] Failed to listen on {}:{}: {}", host, port, err);
                     eprintln!("{}", info.red());
                     exit(-1);
                 }
@@ -88,7 +83,7 @@ fn init_ws_script() {
 async fn static_assets(req: Request<()>) -> tide::Result {
     // Get the path and mime of the static file.
     let mut path = req.url().path().to_string();
-    path = if path.ends_with("/") {
+    path = if path.ends_with('/') {
         format!(".{}index.html", path)
     } else {
         format!(".{}", path)
@@ -107,7 +102,6 @@ async fn static_assets(req: Request<()>) -> tide::Result {
     let mut file: String = String::from_utf8_lossy(&file).parse()?;
 
     // Construct the response.
-    let mut response: Response;
     if mime == "text/html" {
         let head_selector = Selector::from("head");
         let script = SCRIPT.get().unwrap().clone();
@@ -122,7 +116,7 @@ async fn static_assets(req: Request<()>) -> tide::Result {
         .insert_to(&head_selector, script)
         .html();
     }
-    response = file.into();
+    let mut response: Response = file.into();
     response.set_content_type(mime.to_string().as_str());
 
     Ok(response)
