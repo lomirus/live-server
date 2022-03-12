@@ -8,12 +8,21 @@ use tide::{listener::Listener, Request, Response, StatusCode};
 use tide_websockets::WebSocket;
 use uuid::Uuid;
 
-use crate::{PORT, WS_CLIENTS};
+use crate::{HOST, PORT, WS_CLIENTS};
 
 pub static SCRIPT: OnceCell<Node> = OnceCell::new();
 
 pub async fn serve() {
-    let host = local_ip().unwrap().to_string();
+    // TODO: remove the unwrap here
+    let local_ip = local_ip().unwrap().to_string();
+
+    // Here we can call `unwrap()` safely because we have set it
+    // before calling `serve()`
+    let host = HOST.get().unwrap().clone();
+    let host = host.unwrap_or(local_ip);
+
+    // Here we can call `unwrap()` safely because we have set it
+    // before calling `serve()`
     let mut port = PORT.get().unwrap().clone();
     let mut listener = create_listener(&host, &mut port).await;
 
@@ -43,6 +52,7 @@ fn create_server() -> tide::Server<()> {
 }
 
 async fn create_listener(host: &String, port: &mut u16) -> impl Listener<()> {
+    // Loop until the port is available
     loop {
         let app = create_server();
         match app.bind(format!("{}:{}", host, port)).await {
