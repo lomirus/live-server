@@ -1,7 +1,6 @@
 use async_std::prelude::*;
 use colored::Colorize;
 use html_editor::{parse, Editable, Htmlifiable, Node, Selector};
-use local_ip_address::local_ip;
 use once_cell::sync::OnceCell;
 use std::{fs, process::exit};
 use tide::{listener::Listener, Request, Response, StatusCode};
@@ -13,19 +12,9 @@ use crate::{HOST, PORT, WS_CLIENTS};
 pub static SCRIPT: OnceCell<Node> = OnceCell::new();
 
 pub async fn serve() {
-    let local_ip = match local_ip() {
-        Err(err) => {
-            let info = format!(r#"[ERROR] Failed to get local IP address: {}. Using "localhost" by default"#, err.to_string());
-            eprintln!("{}", info.red());
-            "localhost".to_string()
-        }
-        Ok(addr) => addr.to_string(),
-    };
-
     // Here we can call `unwrap()` safely because we have set it
     // before calling `serve()`
-    let host = HOST.get().unwrap().clone();
-    let host = host.unwrap_or(local_ip);
+    let host = HOST.get().unwrap();
 
     // Here we can call `unwrap()` safely because we have set it
     // before calling `serve()`
@@ -88,7 +77,7 @@ fn init_ws_script() {
         .set({
             let script = format!(
                 include_str!("scripts/websocket.js"),
-                local_ip().unwrap(),
+                HOST.get().unwrap(),
                 PORT.get().unwrap()
             );
             Node::new_element("script", vec![], vec![Node::Text(script)])
@@ -110,7 +99,7 @@ async fn static_assets(req: Request<()>) -> tide::Result {
     let file = match fs::read(&path) {
         Ok(file) => file,
         Err(err) => {
-            let info = format!(r#"[ERROR] Failed to read "{}": {}"#, path, err.to_string());
+            let info = format!(r#"[ERROR] Failed to read "{}": {}"#, path, err);
             eprintln!("{}", info.red());
             return Err(tide::Error::new(StatusCode::NotFound, err));
         }

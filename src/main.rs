@@ -3,6 +3,8 @@ mod watcher;
 
 use async_std::{sync::Mutex, task::block_on};
 use clap::Parser;
+use colored::Colorize;
+use local_ip_address::local_ip;
 use once_cell::sync::{Lazy, OnceCell};
 use std::{collections::HashMap, thread};
 use tide_websockets::WebSocketConnection;
@@ -12,7 +14,7 @@ use uuid::Uuid;
 #[derive(Parser)]
 #[clap(version)]
 struct Args {
-    /// Set the listener port 
+    /// Set the listener port
     #[clap(short, long, default_value_t = 8000)]
     port: u16,
     /// Set the listener host, otherwise it will be set to the local IP address
@@ -21,7 +23,7 @@ struct Args {
 }
 
 pub static PORT: OnceCell<u16> = OnceCell::new();
-pub static HOST: OnceCell<Option<String>> = OnceCell::new();
+pub static HOST: OnceCell<String> = OnceCell::new();
 pub static WS_CLIENTS: Lazy<Mutex<HashMap<Uuid, WebSocketConnection>>> =
     Lazy::new(|| Mutex::new(HashMap::new()));
 
@@ -30,7 +32,23 @@ async fn main() {
     let args = Args::parse();
 
     PORT.set(args.port).unwrap();
-    HOST.set(args.host).unwrap();
+    HOST.set({
+        match args.host {
+            Some(host) => host,
+            None => match local_ip() {
+                Err(err) => {
+                    let info = format!(
+                        r#"[ERROR] Failed to get local IP address: {}. Using "localhost" by default"#,
+                        err
+                    );
+                    eprintln!("{}", info.red());
+                    "localhost".to_string()
+                }
+                Ok(addr) => addr.to_string(),
+            },
+        }
+    })
+    .unwrap();
 
     thread::spawn(|| block_on(watcher::watch()));
     server::serve().await;

@@ -41,7 +41,7 @@ pub async fn watch() {
     match watcher.watch(current_dir().unwrap(), RecursiveMode::Recursive) {
         Ok(_) => {}
         Err(err) => {
-            let info = format!("[ERROR] Watcher: {}", err.to_string());
+            let info = format!("[ERROR] Watcher: {}", err);
             println!("{}", info.red());
         }
     }
