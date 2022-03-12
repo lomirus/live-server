@@ -13,8 +13,14 @@ use crate::{HOST, PORT, WS_CLIENTS};
 pub static SCRIPT: OnceCell<Node> = OnceCell::new();
 
 pub async fn serve() {
-    // TODO: remove the unwrap here
-    let local_ip = local_ip().unwrap().to_string();
+    let local_ip = match local_ip() {
+        Err(err) => {
+            let info = format!(r#"[ERROR] Failed to get local IP address: {}. Using "localhost" by default"#, err.to_string());
+            eprintln!("{}", info.red());
+            "localhost".to_string()
+        }
+        Ok(addr) => addr.to_string(),
+    };
 
     // Here we can call `unwrap()` safely because we have set it
     // before calling `serve()`
