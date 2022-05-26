@@ -7,21 +7,20 @@ use tide::{listener::Listener, Request, Response, StatusCode};
 use tide_websockets::WebSocket;
 use uuid::Uuid;
 
-use crate::{HOST, PORT, WS_CLIENTS};
+use crate::{HOST, WS_CLIENTS};
 
 pub static SCRIPT: OnceCell<Node> = OnceCell::new();
 
-pub async fn serve() {
+pub async fn serve(port: u16) {
     // Here we can call `unwrap()` safely because we have set it
     // before calling `serve()`
     let host = HOST.get().unwrap();
 
     // Here we can call `unwrap()` safely because we have set it
     // before calling `serve()`
-    let mut port = *PORT.get().unwrap();
+    let mut port = port;
     let mut listener = create_listener(host, &mut port).await;
-
-    init_ws_script();
+    init_ws_script(port);
 
     let url = format!("http://{}:{}/", host, port);
     println!(" Server listening on {}", url.blue());
@@ -67,13 +66,13 @@ async fn create_listener(host: &String, port: &mut u16) -> impl Listener<()> {
     }
 }
 
-fn init_ws_script() {
+fn init_ws_script(port: u16) {
     SCRIPT
         .set({
             let script = format!(
                 include_str!("scripts/websocket.js"),
                 HOST.get().unwrap(),
-                PORT.get().unwrap()
+                port
             );
             Node::new_element("script", vec![], vec![Node::Text(script)])
         })

@@ -22,16 +22,14 @@ struct Args {
     host: Option<String>,
 }
 
-pub static PORT: OnceCell<u16> = OnceCell::new();
-pub static HOST: OnceCell<String> = OnceCell::new();
-pub static WS_CLIENTS: Lazy<Mutex<HashMap<Uuid, WebSocketConnection>>> =
+pub(crate) static HOST: OnceCell<String> = OnceCell::new();
+pub(crate) static WS_CLIENTS: Lazy<Mutex<HashMap<Uuid, WebSocketConnection>>> =
     Lazy::new(|| Mutex::new(HashMap::new()));
 
 #[async_std::main]
 async fn main() {
     let args = Args::parse();
 
-    PORT.set(args.port).unwrap();
     HOST.set({
         match args.host {
             Some(host) => host,
@@ -51,5 +49,5 @@ async fn main() {
     .unwrap();
 
     thread::spawn(|| block_on(watcher::watch()));
-    server::serve().await;
+    server::serve(args.port).await;
 }
