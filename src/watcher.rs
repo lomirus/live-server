@@ -25,19 +25,12 @@ async fn broadcast() {
     }
 }
 
-pub async fn watch() {
-    println!(
-        "Watcher listening on {}",
-        current_dir()
-            .unwrap()
-            .into_os_string()
-            .to_str()
-            .unwrap()
-            .blue()
-    );
+pub async fn watch(path: String) {
+    println!("Watcher listening on {}", path.blue());
     let (tx, rx) = channel();
     let mut watcher = watcher(tx, Duration::from_millis(100)).unwrap();
-    match watcher.watch(current_dir().unwrap(), RecursiveMode::Recursive) {
+    let path = PathBuf::from(path);
+    match watcher.watch(path, RecursiveMode::Recursive) {
         Ok(_) => {}
         Err(err) => log::error!("Watcher: {}", err),
     }

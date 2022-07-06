@@ -49,6 +49,6 @@ async fn main() {
     })
     .unwrap();
 
-    thread::spawn(|| block_on(watcher::watch()));
+    thread::spawn(|| block_on(watcher::watch(args.path)));
     server::serve(args.port).await;
 }
