@@ -11,23 +11,23 @@ macro_rules! info {
 
 macro_rules! warning {
     ($($arg:tt)*) => ({
-        let content = format!($($arg)*);
-        println!("[WARNING] {}", content.yellow());
+        let content = format!("[WARNING] {}", format!($($arg)*));
+        println!("{}", content.yellow());
     })
 }
 
 macro_rules! error {
     ($($arg:tt)*) => ({
         use colored::Colorize;
-        let content = format!($($arg)*);
-        eprintln!("[ERROR] {}", content.red());
+        let content = format!("[ERROR] {}", format!($($arg)*));
+        eprintln!("{}", content.red());
     })
 }
 
 macro_rules! panic {
     ($($arg:tt)*) => ({
-        let content = format!($($arg)*);
-        std::panic!("[PANIC] {}", content.red());
+        let content = format!("[PANIC] {}", format!($($arg)*));
+        std::panic!("{}", content.red());
     })
 }
 
