@@ -2,12 +2,11 @@ use async_std::prelude::*;
 use colored::Colorize;
 use html_editor::{operation::*, parse, Node};
 use once_cell::sync::OnceCell;
-use std::process::exit;
 use tide::{listener::Listener, Request, Response, StatusCode};
 use tide_websockets::WebSocket;
 use uuid::Uuid;
 
-use crate::{HOST, WS_CLIENTS};
+use crate::{log, HOST, WS_CLIENTS};
 
 pub static SCRIPT: OnceCell<Node> = OnceCell::new();
 
@@ -53,13 +52,10 @@ async fn create_listener(host: &String, port: &mut u16) -> impl Listener<()> {
             Ok(listener) => break listener,
             Err(err) => {
                 if let std::io::ErrorKind::AddrInUse = err.kind() {
-                    let info = format!("[WARNING] Port {} is already in use", port);
-                    println!("{}", info.yellow());
+                    log::warning!("Port {} is already in use", port);
                     *port += 1;
                 } else {
-                    let info = format!("[PANIC] Failed to listen on {}:{}: {}", host, port, err);
-                    eprintln!("{}", info.red());
-                    exit(-1);
+                    log::panic!("Failed to listen on {}:{}: {}", host, port, err);
                 }
             }
         }
@@ -93,8 +89,7 @@ async fn static_assets(req: Request<()>) -> tide::Result {
     let mut file = match async_std::fs::read_to_string(&path).await {
         Ok(file) => file,
         Err(err) => {
-            let info = format!(r#"[ERROR] Failed to read "{}": {}"#, path, err);
-            eprintln!("{}", info.red());
+            log::error!("Failed to read \"{}\": {}", path, err);
             return Err(tide::Error::new(StatusCode::NotFound, err));
         }
     };
@@ -106,8 +101,7 @@ async fn static_assets(req: Request<()>) -> tide::Result {
         file = match parse(file.as_str()) {
             Ok(mut nodes) => nodes,
             Err(err) => {
-                let info = format!(r#"[ERROR] Failed to parse "{}": {}"#, path, err);
-                eprintln!("{}", info.red());
+                log::error!("Failed to parse \"{}\": {}", path, err);
                 return Err(tide::Error::from_str(StatusCode::InternalServerError, err));
             }
         }
