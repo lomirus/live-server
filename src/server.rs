@@ -1,6 +1,6 @@
 use async_std::prelude::*;
 use colored::Colorize;
-use html_editor::{parse, Editable, Htmlifiable, Node, Selector};
+use html_editor::{parse, operation::*, Node};
 use once_cell::sync::OnceCell;
 use std::{fs, process::exit};
 use tide::{listener::Listener, Request, Response, StatusCode};
