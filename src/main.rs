@@ -17,7 +17,7 @@ struct Args {
     /// Set the listener port
     #[clap(short, long, default_value_t = 8000)]
     port: u16,
-    /// Set the listener host, otherwise it will be set to the local IP address
+    /// Set the listener host [default: LAN IP address]
     #[clap(short, long)]
     host: Option<String>,
 }
