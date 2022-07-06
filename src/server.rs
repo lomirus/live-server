@@ -1,8 +1,8 @@
 use async_std::prelude::*;
 use colored::Colorize;
-use html_editor::{parse, operation::*, Node};
+use html_editor::{operation::*, parse, Node};
 use once_cell::sync::OnceCell;
-use std::{fs, process::exit};
+use std::process::exit;
 use tide::{listener::Listener, Request, Response, StatusCode};
 use tide_websockets::WebSocket;
 use uuid::Uuid;
@@ -90,7 +90,7 @@ async fn static_assets(req: Request<()>) -> tide::Result {
     let mime = mime_guess::from_path(&path).first_or_text_plain();
 
     // Read the file.
-    let file = match fs::read(&path) {
+    let mut file = match async_std::fs::read_to_string(&path).await {
         Ok(file) => file,
         Err(err) => {
             let info = format!(r#"[ERROR] Failed to read "{}": {}"#, path, err);
@@ -98,7 +98,6 @@ async fn static_assets(req: Request<()>) -> tide::Result {
             return Err(tide::Error::new(StatusCode::NotFound, err));
         }
     };
-    let mut file: String = String::from_utf8_lossy(&file).parse()?;
 
     // Construct the response.
     if mime == "text/html" {
