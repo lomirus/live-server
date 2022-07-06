@@ -20,6 +20,9 @@ struct Args {
     /// Set the listener host [default: LAN IP address]
     #[clap(short, long)]
     host: Option<String>,
+    /// Set the path of the static assets
+    #[clap(default_value = ".")]
+    path: String,
 }
 
 pub(crate) static HOST: OnceCell<String> = OnceCell::new();
