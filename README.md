@@ -1,5 +1,11 @@
-[![Crates.io](https://img.shields.io/crates/v/live-server)](https://crates.io/crates/live-server)
+[![crate-badge]](crate-link)
 ![License](https://img.shields.io/crates/l/live-server)
+[![check-badge]][check-link]
+
+[crate-badge]: https://img.shields.io/crates/v/live-server
+[crate-link]: https://crates.io/crates/live-server
+[check-badge]: https://github.com/lomirus/live-server/workflows/check/badge.svg
+[check-link]: https://github.com/lomirus/live-server/actions/workflows/check.yaml
 
 # Live Server
 
