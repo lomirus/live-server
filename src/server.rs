@@ -6,7 +6,7 @@ use tide::{listener::Listener, Request, Response, StatusCode};
 use tide_websockets::WebSocket;
 use uuid::Uuid;
 
-use crate::{log, HOST, WS_CLIENTS};
+use crate::{log, HOST, PATH, WS_CLIENTS};
 
 pub static SCRIPT: OnceCell<Node> = OnceCell::new();
 
@@ -79,9 +79,9 @@ async fn static_assets(req: Request<()>) -> tide::Result {
     // Get the path and mime of the static file.
     let mut path = req.url().path().to_string();
     path = if path.ends_with('/') {
-        format!(".{}index.html", path)
+        format!("{}{}index.html", PATH.get().unwrap().display(), path)
     } else {
-        format!(".{}", path)
+        format!("{}{}", PATH.get().unwrap().display(), path)
     };
     let mime = mime_guess::from_path(&path).first_or_text_plain();
 

@@ -8,7 +8,7 @@ use std::{
 };
 use tide_websockets::Message;
 
-use crate::{log, WS_CLIENTS};
+use crate::{log, PATH, WS_CLIENTS};
 
 async fn broadcast() {
     for (_, conn) in WS_CLIENTS.lock().await.iter() {
@@ -21,6 +21,7 @@ pub async fn watch(path: String) {
         Ok(path) => path,
         Err(err) => log::panic!("Failed to get absolute path of `{}`: {}", path, err),
     };
+    PATH.set(abs_path.clone()).unwrap();
     let abs_path_str = match abs_path.clone().into_os_string().into_string() {
         Ok(path_str) => path_str,
         Err(_) => log::panic!(

@@ -6,7 +6,7 @@ use async_std::{sync::Mutex, task::block_on};
 use clap::Parser;
 use local_ip_address::local_ip;
 use once_cell::sync::{Lazy, OnceCell};
-use std::{collections::HashMap, thread};
+use std::{collections::HashMap, path::PathBuf, thread};
 use tide_websockets::WebSocketConnection;
 use uuid::Uuid;
 
@@ -26,6 +26,7 @@ struct Args {
 }
 
 pub(crate) static HOST: OnceCell<String> = OnceCell::new();
+pub(crate) static PATH: OnceCell<PathBuf> = OnceCell::new();
 pub(crate) static WS_CLIENTS: Lazy<Mutex<HashMap<Uuid, WebSocketConnection>>> =
     Lazy::new(|| Mutex::new(HashMap::new()));
 
