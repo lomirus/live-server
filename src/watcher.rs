@@ -1,6 +1,11 @@
 use colored::Colorize;
 use notify::{watcher, DebouncedEvent, RecursiveMode, Watcher};
-use std::{fs, path::PathBuf, sync::mpsc::channel, time::Duration};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+    sync::mpsc::channel,
+    time::Duration,
+};
 use tide_websockets::Message;
 
 use crate::{log, WS_CLIENTS};
@@ -65,8 +70,8 @@ pub async fn watch(path: String) {
     }
 }
 
-fn strip_prefix(path: PathBuf, prefix: &PathBuf) -> String {
-    path.strip_prefix(prefix.clone())
+fn strip_prefix(path: PathBuf, prefix: &Path) -> String {
+    path.strip_prefix(prefix)
         .unwrap()
         .to_str()
         .unwrap()
