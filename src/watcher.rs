@@ -1,23 +1,9 @@
 use colored::Colorize;
 use notify::{watcher, DebouncedEvent, RecursiveMode, Watcher};
-use std::{env::current_dir, path::PathBuf, sync::mpsc::channel, time::Duration};
+use std::{fs, path::PathBuf, sync::mpsc::channel, time::Duration};
 use tide_websockets::Message;
 
 use crate::{log, WS_CLIENTS};
-
-fn get_rltv_path(path: PathBuf) -> String {
-    let prefix_len = current_dir()
-        .expect("Failed to get current directory")
-        .to_str()
-        .expect("Failed to convert current directory to string")
-        .len()
-        + 1;
-    let path = path
-        .to_str()
-        .expect("Failed to convert the changed file/folder path to string");
-
-    path[prefix_len..].to_string()
-}
 
 async fn broadcast() {
     for (_, conn) in WS_CLIENTS.lock().await.iter() {
@@ -26,11 +12,22 @@ async fn broadcast() {
 }
 
 pub async fn watch(path: String) {
-    println!("Watcher listening on {}", path.blue());
+    let abs_path = match fs::canonicalize(path.clone()) {
+        Ok(path) => path,
+        Err(err) => log::panic!("Failed to get absolute path of `{}`: {}", path, err),
+    };
+    let abs_path_str = match abs_path.clone().into_os_string().into_string() {
+        Ok(path_str) => path_str,
+        Err(_) => log::panic!(
+            "Failed to parse path to string for `{}`",
+            abs_path.display()
+        ),
+    }
+    .blue();
+    println!("Watcher listening on {}", abs_path_str);
     let (tx, rx) = channel();
     let mut watcher = watcher(tx, Duration::from_millis(100)).unwrap();
-    let path = PathBuf::from(path);
-    match watcher.watch(path, RecursiveMode::Recursive) {
+    match watcher.watch(abs_path.clone(), RecursiveMode::Recursive) {
         Ok(_) => {}
         Err(err) => log::error!("Watcher: {}", err),
     }
@@ -41,24 +38,23 @@ pub async fn watch(path: String) {
         match recv {
             Ok(event) => match event {
                 Create(path) => {
-                    let path = get_rltv_path(path);
-                    log::info!("[CREATE] {:?}", path);
+                    log::info!("[CREATE] {}", strip_prefix(path, &abs_path));
                     broadcast().await;
                 }
                 Write(path) => {
-                    let path = get_rltv_path(path);
-                    log::info!("[UPDATE] {:?}", path);
+                    log::info!("[UPDATE] {}", strip_prefix(path, &abs_path));
                     broadcast().await;
                 }
                 Remove(path) => {
-                    let path = get_rltv_path(path);
-                    log::info!("[REMOVE] {:?}", path);
+                    log::info!("[REMOVE] {}", strip_prefix(path, &abs_path));
                     broadcast().await;
                 }
                 Rename(from, to) => {
-                    let from = get_rltv_path(from);
-                    let to = get_rltv_path(to);
-                    log::info!("[RENAME] {:?} -> {:?}", from, to);
+                    log::info!(
+                        "[RENAME] {} -> {}",
+                        strip_prefix(from, &abs_path),
+                        strip_prefix(to, &abs_path)
+                    );
                     broadcast().await;
                 }
                 Error(err, _) => log::error!("{}", err),
@@ -67,4 +63,12 @@ pub async fn watch(path: String) {
             Err(err) => log::error!("{}", err),
         }
     }
+}
+
+fn strip_prefix(path: PathBuf, prefix: &PathBuf) -> String {
+    path.strip_prefix(prefix.clone())
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .to_string()
 }
