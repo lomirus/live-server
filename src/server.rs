@@ -89,7 +89,7 @@ async fn static_assets(req: Request<()>) -> tide::Result {
     let mut file = match async_std::fs::read_to_string(&path).await {
         Ok(file) => file,
         Err(err) => {
-            log::error!("Failed to read \"{}\": {}", path, err);
+            log::error!("{}", err);
             return Err(tide::Error::new(StatusCode::NotFound, err));
         }
     };
