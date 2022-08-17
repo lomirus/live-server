@@ -1,8 +1,9 @@
+use async_std::fs;
 use async_std::prelude::*;
 use colored::Colorize;
 use html_editor::{operation::*, parse, Node};
 use once_cell::sync::OnceCell;
-use tide::{listener::Listener, Request, Response, StatusCode};
+use tide::{listener::Listener, Body, Request, Response, StatusCode};
 use tide_websockets::WebSocket;
 use uuid::Uuid;
 
@@ -63,16 +64,13 @@ async fn create_listener(host: &String, port: &mut u16) -> impl Listener<()> {
 }
 
 fn init_ws_script(port: u16) {
-    SCRIPT
-        .set({
-            let script = format!(
-                include_str!("scripts/websocket.js"),
-                HOST.get().unwrap(),
-                port
-            );
-            Node::new_element("script", vec![], vec![Node::Text(script)])
-        })
-        .unwrap();
+    let script = format!(
+        include_str!("scripts/websocket.js"),
+        HOST.get().unwrap(),
+        port
+    );
+    let script = Node::new_element("script", vec![], vec![Node::Text(script)]);
+    SCRIPT.set(script).unwrap();
 }
 
 async fn static_assets(req: Request<()>) -> tide::Result {
@@ -86,7 +84,7 @@ async fn static_assets(req: Request<()>) -> tide::Result {
     let mime = mime_guess::from_path(&path).first_or_text_plain();
 
     // Read the file.
-    let mut file = match async_std::fs::read_to_string(&path).await {
+    let mut file = match fs::read(&path).await {
         Ok(file) => file,
         Err(err) => {
             log::error!("{}", err);
@@ -98,7 +96,14 @@ async fn static_assets(req: Request<()>) -> tide::Result {
     if mime == "text/html" {
         let head_selector = Selector::from("head");
         let script = SCRIPT.get().unwrap().clone();
-        file = match parse(file.as_str()) {
+        let text = match String::from_utf8(file) {
+            Ok(text) => text,
+            Err(err) => {
+                log::error!("{}", err);
+                return Err(tide::Error::from_str(StatusCode::InternalServerError, err));
+            }
+        };
+        file = match parse(&text) {
             Ok(mut nodes) => nodes,
             Err(err) => {
                 log::error!("Failed to parse \"{}\": {}", path, err);
@@ -106,9 +111,10 @@ async fn static_assets(req: Request<()>) -> tide::Result {
             }
         }
         .insert_to(&head_selector, script)
-        .html();
+        .html()
+        .into_bytes();
     }
-    let mut response: Response = file.into();
+    let mut response: Response = Body::from_bytes(file).into();
     response.set_content_type(mime.to_string().as_str());
 
     Ok(response)
