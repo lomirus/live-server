@@ -111,6 +111,7 @@ async fn static_assets(req: Request<()>) -> tide::Result {
             }
         }
         .insert_to(&head_selector, script)
+        .insert_to(&head_selector, Node::Text("\n".to_string()))
         .html()
         .into_bytes();
     }
