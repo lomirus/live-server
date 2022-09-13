@@ -1,4 +1,4 @@
-[![crate-badge]](crate-link)
+[![crate-badge]][crate-link]
 ![License](https://img.shields.io/crates/l/live-server)
 [![check-badge]][check-link]
 
@@ -21,7 +21,7 @@ $ cargo install live-server
 
 ```console
 $ live-server --help
-live-server 0.4.1
+live-server 0.5.0
 Launch a local network server with live reload feature for static pages
 
 USAGE:
