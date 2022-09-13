@@ -904,12 +904,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "html_editor"
-version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7b3dc5b7c9b486d6c25eaf1d05befc584b8baa182a3f292de506aa968c65410f"
-
-[[package]]
 name = "http"
 version = "0.2.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1093,7 +1087,6 @@ dependencies = [
  "async-std",
  "clap",
  "colored",
- "html_editor",
  "local-ip-address",
  "mime_guess",
  "notify",

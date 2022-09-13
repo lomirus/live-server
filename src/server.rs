@@ -1,7 +1,6 @@
 use async_std::fs;
 use async_std::prelude::*;
 use colored::Colorize;
-use html_editor::{operation::*, parse, Node};
 use once_cell::sync::OnceCell;
 use tide::{listener::Listener, Body, Request, Response, StatusCode};
 use tide_websockets::WebSocket;
@@ -9,7 +8,7 @@ use uuid::Uuid;
 
 use crate::{log, HOST, PATH, WS_CLIENTS};
 
-pub static SCRIPT: OnceCell<Node> = OnceCell::new();
+pub static SCRIPT: OnceCell<String> = OnceCell::new();
 
 pub async fn serve(port: u16) {
     // Here we can call `unwrap()` safely because we have set it
@@ -65,11 +64,10 @@ async fn create_listener(host: &String, port: &mut u16) -> impl Listener<()> {
 
 fn init_ws_script(port: u16) {
     let script = format!(
-        include_str!("scripts/websocket.js"),
+        include_str!("scripts/websocket.html"),
         HOST.get().unwrap(),
         port
     );
-    let script = Node::new_element("script", vec![], vec![Node::Text(script)]);
     SCRIPT.set(script).unwrap();
 }
 
@@ -94,8 +92,6 @@ async fn static_assets(req: Request<()>) -> tide::Result {
 
     // Construct the response.
     if mime == "text/html" {
-        let head_selector = Selector::from("head");
-        let script = SCRIPT.get().unwrap().clone();
         let text = match String::from_utf8(file) {
             Ok(text) => text,
             Err(err) => {
@@ -103,17 +99,8 @@ async fn static_assets(req: Request<()>) -> tide::Result {
                 return Err(tide::Error::from_str(StatusCode::InternalServerError, err));
             }
         };
-        file = match parse(&text) {
-            Ok(mut nodes) => nodes,
-            Err(err) => {
-                log::error!("Failed to parse \"{}\": {}", path, err);
-                return Err(tide::Error::from_str(StatusCode::InternalServerError, err));
-            }
-        }
-        .insert_to(&head_selector, script)
-        .insert_to(&head_selector, Node::Text("\n".to_string()))
-        .html()
-        .into_bytes();
+        let script = SCRIPT.get().unwrap();
+        file = format!("{}{}", text, script).into_bytes();
     }
     let mut response: Response = Body::from_bytes(file).into();
     response.set_content_type(mime.to_string().as_str());
