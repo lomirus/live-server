@@ -22,3 +22,4 @@ clap = { version = "3.0.7", features = ["derive"] }
 mime_guess = "2.0.3"
 local-ip-address = "0.4.7"
 colored = "2.0.0"
+log = "0.4.17"

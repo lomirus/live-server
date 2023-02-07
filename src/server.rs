@@ -6,7 +6,7 @@ use tide::{listener::Listener, Body, Request, Response, StatusCode};
 use tide_websockets::WebSocket;
 use uuid::Uuid;
 
-use crate::{log, HOST, PATH, WS_CLIENTS};
+use crate::{HOST, PATH, WS_CLIENTS};
 
 pub static SCRIPT: OnceCell<String> = OnceCell::new();
 
@@ -52,10 +52,10 @@ async fn create_listener(host: &String, port: &mut u16) -> impl Listener<()> {
             Ok(listener) => break listener,
             Err(err) => {
                 if let std::io::ErrorKind::AddrInUse = err.kind() {
-                    log::warning!("Port {} is already in use", port);
+                    log::warn!("Port {} is already in use", port);
                     *port += 1;
                 } else {
-                    log::panic!("Failed to listen on {}:{}: {}", host, port, err);
+                    log::error!("Failed to listen on {}:{}: {}", host, port, err);
                 }
             }
         }

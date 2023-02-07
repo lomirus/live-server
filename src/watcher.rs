@@ -8,7 +8,7 @@ use std::{
 };
 use tide_websockets::Message;
 
-use crate::{log, PATH, WS_CLIENTS};
+use crate::{PATH, WS_CLIENTS};
 
 async fn broadcast() {
     for (_, conn) in WS_CLIENTS.lock().await.iter() {
@@ -19,15 +19,18 @@ async fn broadcast() {
 pub async fn watch(path: String) {
     let abs_path = match fs::canonicalize(path.clone()) {
         Ok(path) => path,
-        Err(err) => log::panic!("Failed to get absolute path of `{}`: {}", path, err),
+        Err(err) => {
+            log::error!("Failed to get absolute path of `{}`: {}", path, err);
+            return;
+        }
     };
     PATH.set(abs_path.clone()).unwrap();
     let abs_path_str = match abs_path.clone().into_os_string().into_string() {
         Ok(path_str) => path_str,
-        Err(_) => log::panic!(
-            "Failed to parse path to string for `{}`",
-            abs_path.display()
-        ),
+        Err(_) => {
+            log::error!("Failed to parse path to string for `{:?}`", abs_path);
+            return;
+        }
     }
     .blue();
     println!("Watcher listening on {}", abs_path_str);
@@ -35,7 +38,7 @@ pub async fn watch(path: String) {
     let mut watcher = watcher(tx, Duration::from_millis(100)).unwrap();
     match watcher.watch(abs_path.clone(), RecursiveMode::Recursive) {
         Ok(_) => {}
-        Err(err) => log::error!("Watcher: {}", err),
+        Err(err) => log::warn!("Watcher: {}", err),
     }
 
     loop {

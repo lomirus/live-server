@@ -1,4 +1,3 @@
-mod log;
 mod server;
 mod watcher;
 
