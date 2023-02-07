@@ -31,6 +31,7 @@ pub(crate) static WS_CLIENTS: Lazy<Mutex<HashMap<Uuid, WebSocketConnection>>> =
 
 #[async_std::main]
 async fn main() {
+    env_logger::init();
     let args = Args::parse();
     HOST.set({
         match args.host {
