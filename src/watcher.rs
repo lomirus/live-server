@@ -45,19 +45,19 @@ pub async fn watch(path: String) {
         match recv {
             Ok(event) => match event {
                 Create(path) => {
-                    log::info!("[CREATE] {}", strip_prefix(path, &abs_path));
+                    log::debug!("[CREATE] {}", strip_prefix(path, &abs_path));
                     broadcast().await;
                 }
                 Write(path) => {
-                    log::info!("[UPDATE] {}", strip_prefix(path, &abs_path));
+                    log::debug!("[UPDATE] {}", strip_prefix(path, &abs_path));
                     broadcast().await;
                 }
                 Remove(path) => {
-                    log::info!("[REMOVE] {}", strip_prefix(path, &abs_path));
+                    log::debug!("[REMOVE] {}", strip_prefix(path, &abs_path));
                     broadcast().await;
                 }
                 Rename(from, to) => {
-                    log::info!(
+                    log::debug!(
                         "[RENAME] {} -> {}",
                         strip_prefix(from, &abs_path),
                         strip_prefix(to, &abs_path)
