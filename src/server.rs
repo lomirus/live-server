@@ -1,6 +1,5 @@
 use async_std::fs;
 use async_std::prelude::*;
-use colored::Colorize;
 use once_cell::sync::OnceCell;
 use tide::{listener::Listener, Body, Request, Response, StatusCode};
 use tide_websockets::WebSocket;
@@ -22,7 +21,7 @@ pub async fn serve(port: u16) {
     init_ws_script(port);
 
     let url = format!("http://{}:{}/", host, port);
-    println!(" Server listening on {}", url.blue());
+    log::info!("Listening on {}", url);
     listener.accept().await.unwrap();
 }
 

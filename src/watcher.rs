@@ -1,4 +1,3 @@
-use colored::Colorize;
 use notify::{watcher, DebouncedEvent, RecursiveMode, Watcher};
 use std::{
     fs,
@@ -31,9 +30,8 @@ pub async fn watch(path: String) {
             log::error!("Failed to parse path to string for `{:?}`", abs_path);
             return;
         }
-    }
-    .blue();
-    println!("Watcher listening on {}", abs_path_str);
+    };
+    log::info!("Listening on {}", abs_path_str);
     let (tx, rx) = channel();
     let mut watcher = watcher(tx, Duration::from_millis(100)).unwrap();
     match watcher.watch(abs_path.clone(), RecursiveMode::Recursive) {
