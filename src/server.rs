@@ -5,23 +5,14 @@ use tide::{listener::Listener, Body, Request, Response, StatusCode};
 use tide_websockets::WebSocket;
 use uuid::Uuid;
 
-use crate::{HOST, PATH, WS_CLIENTS};
+use crate::{PATH, WS_CLIENTS};
 
 pub static SCRIPT: OnceCell<String> = OnceCell::new();
 
-pub async fn serve(port: u16) {
-    // Here we can call `unwrap()` safely because we have set it
-    // before calling `serve()`
-    let host = HOST.get().unwrap();
+pub async fn serve(host: String, port: u16) {
+    let mut listener = create_listener(&host, port).await;
+    init_ws_script(host, port);
 
-    // Here we can call `unwrap()` safely because we have set it
-    // before calling `serve()`
-    let mut port = port;
-    let mut listener = create_listener(host, &mut port).await;
-    init_ws_script(port);
-
-    let url = format!("http://{}:{}/", host, port);
-    log::info!("Listening on {}", url);
     listener.accept().await.unwrap();
 }
 
@@ -43,16 +34,20 @@ fn create_server() -> tide::Server<()> {
     app
 }
 
-async fn create_listener(host: &String, port: &mut u16) -> impl Listener<()> {
+async fn create_listener(host: &String, port: u16) -> impl Listener<()> {
+    let mut port = port;
     // Loop until the port is available
     loop {
         let app = create_server();
         match app.bind(format!("{}:{}", host, port)).await {
-            Ok(listener) => break listener,
+            Ok(listener) => {
+                log::info!("Listening on http://{}:{}/", host, port);
+                break listener;
+            }
             Err(err) => {
                 if let std::io::ErrorKind::AddrInUse = err.kind() {
                     log::warn!("Port {} is already in use", port);
-                    *port += 1;
+                    port += 1;
                 } else {
                     log::error!("Failed to listen on {}:{}: {}", host, port, err);
                 }
@@ -61,12 +56,8 @@ async fn create_listener(host: &String, port: &mut u16) -> impl Listener<()> {
     }
 }
 
-fn init_ws_script(port: u16) {
-    let script = format!(
-        include_str!("scripts/websocket.html"),
-        HOST.get().unwrap(),
-        port
-    );
+fn init_ws_script(host: String, port: u16) {
+    let script = format!(include_str!("scripts/websocket.html"), host, port);
     SCRIPT.set(script).unwrap();
 }
 

@@ -24,7 +24,6 @@ struct Args {
     path: String,
 }
 
-pub(crate) static HOST: OnceCell<String> = OnceCell::new();
 pub(crate) static PATH: OnceCell<PathBuf> = OnceCell::new();
 pub(crate) static WS_CLIENTS: Lazy<Mutex<HashMap<Uuid, WebSocketConnection>>> =
     Lazy::new(|| Mutex::new(HashMap::new()));
@@ -32,24 +31,22 @@ pub(crate) static WS_CLIENTS: Lazy<Mutex<HashMap<Uuid, WebSocketConnection>>> =
 #[async_std::main]
 async fn main() {
     env_logger::init();
+
     let args = Args::parse();
-    HOST.set({
-        match args.host {
-            Some(host) => host,
-            None => match local_ip() {
-                Err(err) => {
-                    log::error!(
-                        "Failed to get local IP address: {}. Using \"localhost\" by default",
-                        err
-                    );
-                    "localhost".to_string()
-                }
-                Ok(addr) => addr.to_string(),
-            },
-        }
-    })
-    .unwrap();
+    let host = match args.host {
+        Some(host) => host,
+        None => match local_ip() {
+            Err(err) => {
+                log::error!(
+                    "Failed to get local IP address: {}. Using \"localhost\" by default",
+                    err
+                );
+                "localhost".to_string()
+            }
+            Ok(addr) => addr.to_string(),
+        },
+    };
 
     thread::spawn(|| block_on(watcher::watch(args.path)));
-    server::serve(args.port).await;
+    server::serve(host, args.port).await;
 }
