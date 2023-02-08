@@ -39,7 +39,7 @@ async fn create_listener(host: &String, port: u16) -> impl Listener<()> {
     // Loop until the port is available
     loop {
         let app = create_server();
-        match app.bind(format!("{}:{}", host, port)).await {
+        match app.bind(format!("{host}:{port}")).await {
             Ok(listener) => {
                 log::info!("Listening on http://{}:{}/", host, port);
                 break listener;
@@ -90,7 +90,7 @@ async fn static_assets(req: Request<()>) -> tide::Result {
             }
         };
         let script = SCRIPT.get().unwrap();
-        file = format!("{}{}", text, script).into_bytes();
+        file = format!("{text}{script}").into_bytes();
     }
     let mut response: Response = Body::from_bytes(file).into();
     response.set_content_type(mime.to_string().as_str());
