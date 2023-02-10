@@ -1,44 +1,36 @@
-use async_std::fs;
-use async_std::prelude::*;
+use std::collections::HashMap;
+use std::sync::Arc;
+
+use async_std::{fs, prelude::*, sync::Mutex};
 use once_cell::sync::OnceCell;
 use tide::{listener::Listener, Body, Request, Response, StatusCode};
-use tide_websockets::WebSocket;
+use tide_websockets::{WebSocket, WebSocketConnection};
 use uuid::Uuid;
 
-use crate::{PATH, WS_CLIENTS};
+use crate::PATH;
 
 pub static SCRIPT: OnceCell<String> = OnceCell::new();
 
-pub async fn serve(host: String, port: u16) {
-    let mut listener = create_listener(&host, port).await;
+pub async fn serve(
+    host: String,
+    port: u16,
+    connections: &Arc<Mutex<HashMap<Uuid, WebSocketConnection>>>,
+) {
+    let mut listener = create_listener(&host, port, connections).await;
     init_ws_script(host, port);
 
     listener.accept().await.unwrap();
 }
 
-fn create_server() -> tide::Server<()> {
-    let mut app = tide::new();
-    app.at("/").get(static_assets);
-    app.at("/*").get(static_assets);
-    app.at("/live-server-ws")
-        .get(WebSocket::new(|_request, mut stream| async move {
-            let uuid = Uuid::new_v4();
-            // Add the connection to clients when opening a new connection
-            WS_CLIENTS.lock().await.insert(uuid, stream.clone());
-            // Waiting for the connection to be closed
-            while let Some(Ok(_)) = stream.next().await {}
-            // Remove the connection from clients when it is closed
-            WS_CLIENTS.lock().await.remove(&uuid);
-            Ok(())
-        }));
-    app
-}
-
-async fn create_listener(host: &String, port: u16) -> impl Listener<()> {
+async fn create_listener(
+    host: &String,
+    port: u16,
+    connections: &Arc<Mutex<HashMap<Uuid, WebSocketConnection>>>,
+) -> impl Listener<()> {
     let mut port = port;
     // Loop until the port is available
     loop {
-        let app = create_server();
+        let app = create_server(Arc::clone(connections));
         match app.bind(format!("{host}:{port}")).await {
             Ok(listener) => {
                 log::info!("Listening on http://{}:{}/", host, port);
@@ -54,6 +46,35 @@ async fn create_listener(host: &String, port: u16) -> impl Listener<()> {
             }
         }
     }
+}
+
+fn create_server(connections: Arc<Mutex<HashMap<Uuid, WebSocketConnection>>>) -> tide::Server<()> {
+    let mut app = tide::new();
+    app.at("/").get(static_assets);
+    app.at("/*").get(static_assets);
+    app.at("/asd").get(|_| async {
+        let response: Response = Body::from("bytes").into();
+        Ok(response)
+    });
+    app.at("/live-server-ws")
+        .get(WebSocket::new(move |_request, mut stream| {
+            let connections = Arc::clone(&connections);
+            async move {
+                let uuid = Uuid::new_v4();
+
+                // Add the connection to clients when opening a new connection
+                connections.lock().await.insert(uuid, stream.clone());
+
+                // Waiting for the connection to be closed
+                while let Some(Ok(_)) = stream.next().await {}
+
+                // Remove the connection from clients when it is closed
+                connections.lock().await.remove(&uuid);
+                
+                Ok(())
+            }
+        }));
+    app
 }
 
 fn init_ws_script(host: String, port: u16) {

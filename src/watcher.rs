@@ -1,21 +1,25 @@
-use notify::{watcher, DebouncedEvent, RecursiveMode, Watcher};
 use std::{
+    collections::HashMap,
     fs,
     path::{Path, PathBuf},
-    sync::mpsc::channel,
+    sync::{mpsc::channel, Arc},
     time::Duration,
 };
-use tide_websockets::Message;
 
-use crate::{PATH, WS_CLIENTS};
+use async_std::sync::Mutex;
+use notify::{watcher, DebouncedEvent, RecursiveMode, Watcher};
+use tide_websockets::{Message, WebSocketConnection};
+use uuid::Uuid;
 
-async fn broadcast() {
-    for (_, conn) in WS_CLIENTS.lock().await.iter() {
+use crate::PATH;
+
+async fn broadcast(connections: &Arc<Mutex<HashMap<Uuid, WebSocketConnection>>>) {
+    for (_, conn) in connections.lock().await.iter() {
         conn.send(Message::Text(String::new())).await.unwrap();
     }
 }
 
-pub async fn watch(path: String) {
+pub async fn watch(path: String, connections: &Arc<Mutex<HashMap<Uuid, WebSocketConnection>>>) {
     let abs_path = match fs::canonicalize(path.clone()) {
         Ok(path) => path,
         Err(err) => {
@@ -46,15 +50,15 @@ pub async fn watch(path: String) {
             Ok(event) => match event {
                 Create(path) => {
                     log::debug!("[CREATE] {}", strip_prefix(path, &abs_path));
-                    broadcast().await;
+                    broadcast(connections).await;
                 }
                 Write(path) => {
                     log::debug!("[UPDATE] {}", strip_prefix(path, &abs_path));
-                    broadcast().await;
+                    broadcast(connections).await;
                 }
                 Remove(path) => {
                     log::debug!("[REMOVE] {}", strip_prefix(path, &abs_path));
-                    broadcast().await;
+                    broadcast(connections).await;
                 }
                 Rename(from, to) => {
                     log::debug!(
@@ -62,7 +66,7 @@ pub async fn watch(path: String) {
                         strip_prefix(from, &abs_path),
                         strip_prefix(to, &abs_path)
                     );
-                    broadcast().await;
+                    broadcast(connections).await;
                 }
                 Error(err, _) => log::error!("{}", err),
                 _ => {}

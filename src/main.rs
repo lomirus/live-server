@@ -1,13 +1,11 @@
 mod server;
 mod watcher;
 
-use async_std::{sync::Mutex, task::block_on};
+use async_std::{sync::Mutex, task};
 use clap::Parser;
 use local_ip_address::local_ip;
-use once_cell::sync::{Lazy, OnceCell};
-use std::{collections::HashMap, path::PathBuf, thread};
-use tide_websockets::WebSocketConnection;
-use uuid::Uuid;
+use once_cell::sync::OnceCell;
+use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 /// Launch a local network server with live reload feature for static pages.
 #[derive(Parser)]
@@ -25,8 +23,6 @@ struct Args {
 }
 
 pub(crate) static PATH: OnceCell<PathBuf> = OnceCell::new();
-pub(crate) static WS_CLIENTS: Lazy<Mutex<HashMap<Uuid, WebSocketConnection>>> =
-    Lazy::new(|| Mutex::new(HashMap::new()));
 
 #[async_std::main]
 async fn main() {
@@ -47,6 +43,9 @@ async fn main() {
         },
     };
 
-    thread::spawn(|| block_on(watcher::watch(args.path)));
-    server::serve(host, args.port).await;
+    let connections1 = Arc::new(Mutex::new(HashMap::new()));
+    let connections2 = Arc::clone(&connections1);
+
+    task::spawn(async move { watcher::watch(args.path, &connections1).await });
+    server::serve(host, args.port, &connections2).await;
 }
