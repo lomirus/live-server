@@ -2,14 +2,23 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use async_std::{fs, prelude::*, sync::Mutex};
-use once_cell::sync::OnceCell;
 use tide::{listener::Listener, Body, Request, Response, StatusCode};
 use tide_websockets::{WebSocket, WebSocketConnection};
 use uuid::Uuid;
 
 use crate::PATH;
 
-pub static SCRIPT: OnceCell<String> = OnceCell::new();
+macro_rules! static_assets_service {
+    ($app: expr, $route: expr, $host: ident, $port: ident) => {
+        let host_clone = $host.to_string();
+        let port_clone = $port;
+        $app.at($route).get(move |req: Request<()>| {
+            let host = host_clone.clone();
+            let port = port_clone.clone();
+            static_assets(req, host, port)
+        });
+    };
+}
 
 pub async fn serve(
     host: String,
@@ -17,20 +26,18 @@ pub async fn serve(
     connections: &Arc<Mutex<HashMap<Uuid, WebSocketConnection>>>,
 ) {
     let mut listener = create_listener(&host, port, connections).await;
-    init_ws_script(host, port);
-
     listener.accept().await.unwrap();
 }
 
 async fn create_listener(
-    host: &String,
+    host: &str,
     port: u16,
     connections: &Arc<Mutex<HashMap<Uuid, WebSocketConnection>>>,
 ) -> impl Listener<()> {
     let mut port = port;
     // Loop until the port is available
     loop {
-        let app = create_server(Arc::clone(connections));
+        let app = create_server(host, port, Arc::clone(connections));
         match app.bind(format!("{host}:{port}")).await {
             Ok(listener) => {
                 log::info!("Listening on http://{}:{}/", host, port);
@@ -48,14 +55,16 @@ async fn create_listener(
     }
 }
 
-fn create_server(connections: Arc<Mutex<HashMap<Uuid, WebSocketConnection>>>) -> tide::Server<()> {
+fn create_server(
+    host: &str,
+    port: u16,
+    connections: Arc<Mutex<HashMap<Uuid, WebSocketConnection>>>,
+) -> tide::Server<()> {
     let mut app = tide::new();
-    app.at("/").get(static_assets);
-    app.at("/*").get(static_assets);
-    app.at("/asd").get(|_| async {
-        let response: Response = Body::from("bytes").into();
-        Ok(response)
-    });
+
+    static_assets_service!(app, "/", host, port);
+    static_assets_service!(app, "/*", host, port);
+
     app.at("/live-server-ws")
         .get(WebSocket::new(move |_request, mut stream| {
             let connections = Arc::clone(&connections);
@@ -70,22 +79,17 @@ fn create_server(connections: Arc<Mutex<HashMap<Uuid, WebSocketConnection>>>) ->
 
                 // Remove the connection from clients when it is closed
                 connections.lock().await.remove(&uuid);
-                
+
                 Ok(())
             }
         }));
     app
 }
 
-fn init_ws_script(host: String, port: u16) {
-    let script = format!(include_str!("scripts/websocket.html"), host, port);
-    SCRIPT.set(script).unwrap();
-}
-
-async fn static_assets(req: Request<()>) -> tide::Result {
+async fn static_assets(req: Request<()>, host: String, port: u16) -> Result<Response, tide::Error> {
     // Get the path and mime of the static file.
-    let mut path = req.url().path().to_string();
-    path = if path.ends_with('/') {
+    let path = req.url().path().to_string();
+    let path = if path.ends_with('/') {
         format!("{}{}index.html", PATH.get().unwrap().display(), path)
     } else {
         format!("{}{}", PATH.get().unwrap().display(), path)
@@ -110,7 +114,7 @@ async fn static_assets(req: Request<()>) -> tide::Result {
                 return Err(tide::Error::from_str(StatusCode::InternalServerError, err));
             }
         };
-        let script = SCRIPT.get().unwrap();
+        let script = format!(include_str!("scripts/websocket.html"), host, port);
         file = format!("{text}{script}").into_bytes();
     }
     let mut response: Response = Body::from_bytes(file).into();
