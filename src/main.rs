@@ -16,9 +16,9 @@ struct Args {
     /// Set the listener host [default: LAN IP address]
     #[clap(short, long)]
     host: Option<String>,
-    /// Set the path of the static assets
+    /// Set the root path of the static assets
     #[clap(default_value = ".")]
-    path: String,
+    root: String,
 }
 
 #[async_std::main]
@@ -42,8 +42,8 @@ async fn main() {
 
     let connections1 = Arc::new(Mutex::new(HashMap::new()));
     let connections2 = Arc::clone(&connections1);
-    let path_clone = args.path.clone();
+    let root_clone = args.root.clone();
 
-    task::spawn(async move { watcher::watch(path_clone, &connections1).await });
-    server::serve(host, args.port, args.path, connections2).await;
+    task::spawn(async move { watcher::watch(root_clone, &connections1).await });
+    server::serve(host, args.port, args.root, connections2).await;
 }
