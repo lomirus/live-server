@@ -18,21 +18,23 @@ async fn broadcast(connections: &Arc<Mutex<HashMap<Uuid, WebSocketConnection>>>)
 }
 
 pub async fn watch(root: String, connections: &Arc<Mutex<HashMap<Uuid, WebSocketConnection>>>) {
-    let abs_root = match fs::canonicalize(root.clone()) {
+    let abs_root = match fs::canonicalize(&root) {
         Ok(path) => path,
         Err(err) => {
             log::error!("Failed to get absolute path of `{}`: {}", root, err);
             return;
         }
     };
-    let abs_root_str = match abs_root.clone().into_os_string().into_string() {
-        Ok(path_str) => path_str,
+    match abs_root.clone().into_os_string().into_string() {
+        Ok(path_str) => {
+            log::info!("Listening on {}", path_str);
+        }
         Err(_) => {
             log::error!("Failed to parse path to string for `{:?}`", abs_root);
             return;
         }
     };
-    log::info!("Listening on {}", abs_root_str);
+
     let (tx, rx) = channel();
     let mut watcher = watcher(tx, Duration::from_millis(100)).unwrap();
     match watcher.watch(abs_root.clone(), RecursiveMode::Recursive) {
