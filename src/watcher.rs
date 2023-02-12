@@ -11,8 +11,6 @@ use notify::{watcher, DebouncedEvent, RecursiveMode, Watcher};
 use tide_websockets::{Message, WebSocketConnection};
 use uuid::Uuid;
 
-use crate::PATH;
-
 async fn broadcast(connections: &Arc<Mutex<HashMap<Uuid, WebSocketConnection>>>) {
     for (_, conn) in connections.lock().await.iter() {
         conn.send(Message::Text(String::new())).await.unwrap();
@@ -27,7 +25,6 @@ pub async fn watch(path: String, connections: &Arc<Mutex<HashMap<Uuid, WebSocket
             return;
         }
     };
-    PATH.set(abs_path.clone()).unwrap();
     let abs_path_str = match abs_path.clone().into_os_string().into_string() {
         Ok(path_str) => path_str,
         Err(_) => {
