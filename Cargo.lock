@@ -1157,7 +1157,6 @@ dependencies = [
  "log",
  "mime_guess",
  "notify",
- "once_cell",
  "tide",
  "tide-websockets",
  "uuid",
