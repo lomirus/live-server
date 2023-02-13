@@ -1,12 +1,10 @@
 use std::{
     collections::HashMap,
-    fs,
-    path::{Path, PathBuf},
     sync::{mpsc::channel, Arc},
     time::Duration,
 };
 
-use async_std::sync::Mutex;
+use async_std::{fs, path::PathBuf, sync::Mutex};
 use notify::{watcher, DebouncedEvent, RecursiveMode, Watcher};
 use tide_websockets::{Message, WebSocketConnection};
 use uuid::Uuid;
@@ -17,11 +15,11 @@ async fn broadcast(connections: &Arc<Mutex<HashMap<Uuid, WebSocketConnection>>>)
     }
 }
 
-pub async fn watch(root: String, connections: &Arc<Mutex<HashMap<Uuid, WebSocketConnection>>>) {
-    let abs_root = match fs::canonicalize(&root) {
+pub async fn watch(root: PathBuf, connections: &Arc<Mutex<HashMap<Uuid, WebSocketConnection>>>) {
+    let abs_root = match fs::canonicalize(&root).await {
         Ok(path) => path,
         Err(err) => {
-            log::error!("Failed to get absolute path of `{}`: {}", root, err);
+            log::error!("Failed to get absolute path of {:?}: {}", root, err);
             return;
         }
     };
@@ -75,7 +73,7 @@ pub async fn watch(root: String, connections: &Arc<Mutex<HashMap<Uuid, WebSocket
     }
 }
 
-fn strip_prefix(path: PathBuf, prefix: &Path) -> String {
+fn strip_prefix(path: std::path::PathBuf, prefix: &PathBuf) -> String {
     path.strip_prefix(prefix)
         .unwrap()
         .to_str()
