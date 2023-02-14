@@ -25,9 +25,9 @@ pub async fn serve(
     port: u16,
     root: PathBuf,
     connections: Arc<Mutex<HashMap<Uuid, WebSocketConnection>>>,
-) {
-    let mut listener = create_listener(&host, port, &root, connections).await;
-    listener.accept().await.unwrap();
+) -> Result<(), std::io::Error> {
+    let mut listener = create_listener(host, port, &root, connections).await;
+    listener.accept().await
 }
 
 async fn create_listener(
