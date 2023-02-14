@@ -5,7 +5,7 @@ use std::{collections::HashMap, sync::Arc};
 
 use async_std::{path::PathBuf, sync::Mutex, task};
 
-pub async fn run<R: Into<PathBuf>>(root: R, host: String, port: u16) {
+pub async fn run<R: Into<PathBuf>>(root: R, host: &str, port: u16) {
     let connections1 = Arc::new(Mutex::new(HashMap::new()));
     let connections2 = Arc::clone(&connections1);
     let root1: PathBuf = root.into();

@@ -21,7 +21,7 @@ macro_rules! static_assets_service {
 }
 
 pub async fn serve(
-    host: String,
+    host: &str,
     port: u16,
     root: PathBuf,
     connections: Arc<Mutex<HashMap<Uuid, WebSocketConnection>>>,

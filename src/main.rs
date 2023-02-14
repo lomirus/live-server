@@ -36,5 +36,5 @@ async fn main() {
         },
     };
 
-    run(args.root, host, args.port).await;
+    run(args.root, &host, args.port).await;
 }
