@@ -1,5 +1,5 @@
 use clap::Parser;
-use live_server::run;
+use live_server::listen;
 use local_ip_address::local_ip;
 
 /// Launch a local network server with live reload feature for static pages.
@@ -36,5 +36,5 @@ async fn main() {
         },
     };
 
-    run(args.root, &host, args.port).await;
+    listen(&host, args.port, args.root).await;
 }
