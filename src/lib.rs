@@ -1,11 +1,11 @@
 //! Launch a local network server with live reload feature for static pages.
-//! 
+//!
 //! - Listening custom host
 //! ```
 //! use live_server::listen;
 //! listen("127.0.0.1", 8080, "./").await.unwrap();
 //! ```
-//! 
+//!
 //! - Listening local network IP address
 //! ```
 //! use live_server::listen_local;
@@ -55,7 +55,7 @@ pub async fn listen<R: Into<PathBuf>>(
 
 /// Watch the directory and create a static server, which
 /// will listen on the local network IP address.
-/// 
+///
 /// ```
 /// use live_server::listen_local;
 /// listen_local(8080, "./").await.unwrap();
