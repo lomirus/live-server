@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use async_std::{fs, prelude::*, sync::Mutex};
+use async_std::{fs, path::PathBuf, prelude::*, sync::Mutex};
 use tide::{listener::Listener, Body, Request, Response, StatusCode};
 use tide_websockets::{WebSocket, WebSocketConnection};
 use uuid::Uuid;
@@ -10,7 +10,7 @@ macro_rules! static_assets_service {
     ($app: expr, $route: expr, $host: ident, $port: ident, $root: ident) => {
         let host_clone = $host.to_string();
         let port_clone = $port;
-        let root_clone = $root.to_string();
+        let root_clone = $root.clone();
         $app.at($route).get(move |req: Request<()>| {
             let host = host_clone.clone();
             let port = port_clone.clone();
@@ -21,19 +21,19 @@ macro_rules! static_assets_service {
 }
 
 pub async fn serve(
-    host: String,
+    host: &str,
     port: u16,
-    root: String,
+    root: PathBuf,
     connections: Arc<Mutex<HashMap<Uuid, WebSocketConnection>>>,
-) {
-    let mut listener = create_listener(&host, port, &root, connections).await;
-    listener.accept().await.unwrap();
+) -> Result<(), std::io::Error> {
+    let mut listener = create_listener(host, port, &root, connections).await;
+    listener.accept().await
 }
 
 async fn create_listener(
     host: &str,
     port: u16,
-    root: &str,
+    root: &PathBuf,
     connections: Arc<Mutex<HashMap<Uuid, WebSocketConnection>>>,
 ) -> impl Listener<()> {
     let mut port = port;
@@ -60,7 +60,7 @@ async fn create_listener(
 fn create_server(
     host: &str,
     port: u16,
-    root: &str,
+    root: &PathBuf,
     connections: Arc<Mutex<HashMap<Uuid, WebSocketConnection>>>,
 ) -> tide::Server<()> {
     let mut app = tide::new();
@@ -93,15 +93,13 @@ async fn static_assets(
     req: Request<()>,
     host: String,
     port: u16,
-    root: String,
+    root: PathBuf,
 ) -> Result<Response, tide::Error> {
     // Get the path and mime of the static file.
-    let path = req.url().path().to_string();
-    let path = if path.ends_with('/') {
-        format!("{root}{path}index.html")
-    } else {
-        format!("{root}{path}")
-    };
+    let mut path = root.join(req.url().path());
+    if path.is_dir().await {
+        path.push("index.html");
+    }
     let mime = mime_guess::from_path(&path).first_or_text_plain();
 
     // Read the file.

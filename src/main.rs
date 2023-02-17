@@ -1,10 +1,6 @@
-mod server;
-mod watcher;
-
-use async_std::{sync::Mutex, task};
 use clap::Parser;
+use live_server::listen;
 use local_ip_address::local_ip;
-use std::{collections::HashMap, sync::Arc};
 
 /// Launch a local network server with live reload feature for static pages.
 #[derive(Parser)]
@@ -40,10 +36,5 @@ async fn main() {
         },
     };
 
-    let connections1 = Arc::new(Mutex::new(HashMap::new()));
-    let connections2 = Arc::clone(&connections1);
-    let root_clone = args.root.clone();
-
-    task::spawn(async move { watcher::watch(root_clone, &connections1).await });
-    server::serve(host, args.port, args.root, connections2).await;
+    listen(&host, args.port, args.root).await.unwrap();
 }
