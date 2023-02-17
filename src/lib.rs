@@ -1,3 +1,17 @@
+//! Launch a local network server with live reload feature for static pages.
+//! 
+//! - Listening custom host
+//! ```
+//! use live_server::listen;
+//! listen("127.0.0.1", 8080, "./").await.unwrap();
+//! ```
+//! 
+//! - Listening local network IP address
+//! ```
+//! use live_server::listen_local;
+//! listen_local(8080, "./").await.unwrap();
+//! ```
+
 mod server;
 mod watcher;
 
@@ -20,6 +34,11 @@ pub enum Error {
     ListenerError(std::io::Error),
 }
 
+/// Watch the directory and create a static server.
+/// ```
+/// use live_server::listen;
+/// listen("127.0.0.1", 8080, "./").await.unwrap();
+/// ```
 pub async fn listen<R: Into<PathBuf>>(
     host: &str,
     port: u16,
@@ -34,6 +53,13 @@ pub async fn listen<R: Into<PathBuf>>(
     server::serve(host, port, root2, connections2).await
 }
 
+/// Watch the directory and create a static server, which
+/// will listen on the local network IP address.
+/// 
+/// ```
+/// use live_server::listen_local;
+/// listen_local(8080, "./").await.unwrap();
+/// ```
 pub async fn listen_local<R: Into<PathBuf>>(port: u16, root: R) -> Result<(), Error> {
     return match local_ip() {
         Err(err) => match err {
