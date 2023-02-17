@@ -41,6 +41,16 @@ OPTIONS:
     -V, --version        Print version information
 ```
 
+### Log Level
+
+You can set different [`RUST_LOG` environment variable](https://rust-lang-nursery.github.io/rust-cookbook/development_tools/debugging/config_log.html) to filter the log. The default log level is `warn`. So if you want to get more detailed information, it is recommended to use:
+
+```console
+$ RUST_LOG=debug,tide=warn live-server
+[2023-02-17T09:18:56Z INFO  live_server::server] Listening on http://192.168.0.166:8000/
+[2023-02-17T09:18:56Z INFO  live_server::watcher] Listening on /tmp/live_server_test/
+[2023-02-17T09:19:06Z DEBUG live_server::watcher] [UPDATE] index.html
+```
 ## Package
 
 You can also import it as a library in your project.
