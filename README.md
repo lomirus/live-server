@@ -11,13 +11,17 @@
 
 Launch a local network server with live reload feature for static pages.
 
-## Install
+## Binary
+
+You can use it as a CLI program.
+
+### Install
 
 ```console
 $ cargo install live-server
 ```
 
-## Usage
+### Usage
 
 ```console
 $ live-server --help
@@ -37,12 +41,20 @@ OPTIONS:
     -V, --version        Print version information
 ```
 
-## Example
+## Package
 
-```console
-$ live-server
-Watcher listening on /home/lomirus/demo
- Server listening on http://192.168.0.105:8000/
-[UPDATE] index.html
-[UPDATE] scripts/main.js
+You can also import it as a library in your project.
+
+### Listening custom host
+
+```rust
+use live_server::listen;
+listen("127.0.0.1", 8080, "./").await.unwrap();
+```
+
+### Listening local network IP address
+
+```rust
+use live_server::listen_local;
+listen_local(8080, "./").await.unwrap();
 ```
