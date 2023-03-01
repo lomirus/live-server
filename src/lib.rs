@@ -5,7 +5,7 @@
 //! use live_server::listen;
 //! listen("127.0.0.1", 8080, "./").await.unwrap();
 //! ```
-//! 
+//!
 //! ## Enable logs (Optional)
 //! ```rust
 //! env_logger::init();
