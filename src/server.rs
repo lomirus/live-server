@@ -96,7 +96,9 @@ async fn static_assets(
     root: PathBuf,
 ) -> Result<Response, tide::Error> {
     // Get the path and mime of the static file.
-    let mut path = root.join(req.url().path());
+    let mut path = req.url().path().to_string();
+    path.remove(0);
+    let mut path = root.join(path);
     if path.is_dir().await {
         path.push("index.html");
     }
