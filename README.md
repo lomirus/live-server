@@ -51,20 +51,20 @@ $ RUST_LOG=debug,tide=warn live-server
 [2023-02-17T09:18:56Z INFO  live_server::watcher] Listening on /tmp/live_server_test/
 [2023-02-17T09:19:06Z DEBUG live_server::watcher] [UPDATE] index.html
 ```
+
 ## Package
 
 You can also import it as a library in your project.
 
-### Listening custom host
+### Create live server
 
 ```rust
 use live_server::listen;
 listen("127.0.0.1", 8080, "./").await.unwrap();
 ```
 
-### Listening local network IP address
+### Enable logs (Optional)
 
 ```rust
-use live_server::listen_local;
-listen_local(8080, "./").await.unwrap();
+env_logger::init();
 ```
