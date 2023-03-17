@@ -108,7 +108,7 @@ async fn static_assets(
     let mut file = match fs::read(&path).await {
         Ok(file) => file,
         Err(err) => {
-            log::error!("{}", err);
+            log::warn!("{}", err);
             return Err(tide::Error::new(StatusCode::NotFound, err));
         }
     };
