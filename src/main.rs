@@ -1,4 +1,5 @@
 use clap::Parser;
+use env_logger::Env;
 use live_server::listen;
 use local_ip_address::local_ip;
 
@@ -19,7 +20,8 @@ struct Args {
 
 #[async_std::main]
 async fn main() {
-    env_logger::init();
+    let env = Env::new().default_filter_or("info,tide=error");
+    env_logger::init_from_env(env);
 
     let args = Args::parse();
     let host = match args.host {
