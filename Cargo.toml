@@ -12,7 +12,7 @@ keywords = ["live", "server", "web"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-notify = "4.0.17"
+notify = "6.0.1"
 tide = "0.16.0"
 async-std = { version = "1.10.0", features = ["attributes"] }
 tide-websockets = "0.4.0"
