@@ -19,6 +19,6 @@ tide-websockets = "0.4.0"
 uuid = { version = "1.4.1", features = ["v4"] }
 clap = { version = "3.2.25", features = ["derive"] }
 mime_guess = "2.0.3"
-local-ip-address = "0.5.3"
+local-ip-address = "0.5.4"
 log = "0.4.17"
 env_logger = "0.10.0"
