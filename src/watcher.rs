@@ -46,6 +46,7 @@ pub async fn watch(root: PathBuf, connections: &Arc<Mutex<HashMap<Uuid, WebSocke
         .add_root(watched_path.as_path(), RecursiveMode::Recursive);
 
     for result in rx {
+        let mut files_changed = false;
         match result {
             Ok(events) => {
                 println!("test");
@@ -55,7 +56,7 @@ pub async fn watch(root: PathBuf, connections: &Arc<Mutex<HashMap<Uuid, WebSocke
                         Create(_) => {
                             let path = e.event.paths[0].to_str().unwrap();
                             log::debug!("[CREATE] {}", path);
-                            broadcast(connections).await;
+                            files_changed = true;
                         }
                         Modify(kind) => {
                             use notify::event::ModifyKind::*;
@@ -70,20 +71,20 @@ pub async fn watch(root: PathBuf, connections: &Arc<Mutex<HashMap<Uuid, WebSocke
                                             strip_prefix(source_name, &watched_path),
                                             strip_prefix(target_name, &watched_path)
                                         );
-                                        broadcast(connections).await;
+                                        files_changed = true;
                                     }
                                 }
                                 _ => {
                                     let paths = e.event.paths[0].to_str().unwrap();
                                     log::debug!("[UPDATE] {}", paths);
-                                    broadcast(connections).await;
+                                    files_changed = true;
                                 }
                             }
                         }
                         Remove(_) => {
                             let paths = e.event.paths[0].to_str().unwrap();
                             log::debug!("[REMOVE] {}", paths);
-                            broadcast(connections).await;
+                            files_changed = true;
                         }
                         _ => {}
                     }
@@ -94,6 +95,9 @@ pub async fn watch(root: PathBuf, connections: &Arc<Mutex<HashMap<Uuid, WebSocke
                     log::error!("{}", err);
                 }
             }
+        }
+        if files_changed {
+            broadcast(connections).await;
         }
     }
 }
