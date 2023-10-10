@@ -5,7 +5,8 @@ use std::{
 };
 
 use async_std::{fs, path::PathBuf, sync::Mutex};
-use notify::{watcher, DebouncedEvent, RecursiveMode, Watcher};
+use notify::{RecursiveMode, Watcher};
+use notify_debouncer_full::new_debouncer;
 use tide_websockets::{Message, WebSocketConnection};
 use uuid::Uuid;
 
@@ -34,46 +35,70 @@ pub async fn watch(root: PathBuf, connections: &Arc<Mutex<HashMap<Uuid, WebSocke
     };
 
     let (tx, rx) = channel();
-    let mut watcher = watcher(tx, Duration::from_millis(100)).unwrap();
-    match watcher.watch(abs_root.clone(), RecursiveMode::Recursive) {
-        Ok(_) => {}
-        Err(err) => log::warn!("Watcher: {}", err),
-    }
+    let mut debouncer = new_debouncer(Duration::from_millis(200), None, tx).unwrap();
+    let watched_path: std::path::PathBuf = abs_root.into();
+    debouncer
+        .watcher()
+        .watch(watched_path.as_path(), RecursiveMode::Recursive)
+        .unwrap();
+    debouncer
+        .cache()
+        .add_root(watched_path.as_path(), RecursiveMode::Recursive);
 
-    loop {
-        use DebouncedEvent::*;
-        let recv = rx.recv();
-        match recv {
-            Ok(event) => match event {
-                Create(path) => {
-                    log::debug!("[CREATE] {}", strip_prefix(path, &abs_root));
-                    broadcast(connections).await;
+    for result in rx {
+        match result {
+            Ok(events) => {
+                println!("test");
+                for e in events {
+                    use notify::EventKind::*;
+                    match e.event.kind {
+                        Create(_) => {
+                            let path = e.event.paths[0].to_str().unwrap();
+                            log::debug!("[CREATE] {}", path);
+                            broadcast(connections).await;
+                        }
+                        Modify(kind) => {
+                            use notify::event::ModifyKind::*;
+                            match kind {
+                                Name(kind) => {
+                                    use notify::event::RenameMode::*;
+                                    if let Both = kind {
+                                        let source_name = &e.event.paths[0];
+                                        let target_name = &e.event.paths[1];
+                                        log::debug!(
+                                            "[RENAME] {} -> {}",
+                                            strip_prefix(source_name, &watched_path),
+                                            strip_prefix(target_name, &watched_path)
+                                        );
+                                        broadcast(connections).await;
+                                    }
+                                }
+                                _ => {
+                                    let paths = e.event.paths[0].to_str().unwrap();
+                                    log::debug!("[UPDATE] {}", paths);
+                                    broadcast(connections).await;
+                                }
+                            }
+                        }
+                        Remove(_) => {
+                            let paths = e.event.paths[0].to_str().unwrap();
+                            log::debug!("[REMOVE] {}", paths);
+                            broadcast(connections).await;
+                        }
+                        _ => {}
+                    }
                 }
-                Write(path) => {
-                    log::debug!("[UPDATE] {}", strip_prefix(path, &abs_root));
-                    broadcast(connections).await;
+            }
+            Err(errors) => {
+                for err in errors {
+                    log::error!("{}", err);
                 }
-                Remove(path) => {
-                    log::debug!("[REMOVE] {}", strip_prefix(path, &abs_root));
-                    broadcast(connections).await;
-                }
-                Rename(from, to) => {
-                    log::debug!(
-                        "[RENAME] {} -> {}",
-                        strip_prefix(from, &abs_root),
-                        strip_prefix(to, &abs_root)
-                    );
-                    broadcast(connections).await;
-                }
-                Error(err, _) => log::error!("{}", err),
-                _ => {}
-            },
-            Err(err) => log::error!("{}", err),
+            }
         }
     }
 }
 
-fn strip_prefix(path: std::path::PathBuf, prefix: &PathBuf) -> String {
+fn strip_prefix(path: &std::path::Path, prefix: &std::path::PathBuf) -> String {
     path.strip_prefix(prefix)
         .unwrap()
         .to_str()
