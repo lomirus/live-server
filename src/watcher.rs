@@ -49,7 +49,6 @@ pub async fn watch(root: PathBuf, connections: &Arc<Mutex<HashMap<Uuid, WebSocke
         let mut files_changed = false;
         match result {
             Ok(events) => {
-                println!("test");
                 for e in events {
                     use notify::EventKind::*;
                     match e.event.kind {
