@@ -122,7 +122,7 @@ async fn static_assets(
                 return Err(tide::Error::from_str(StatusCode::InternalServerError, err));
             }
         };
-        let script = format!(include_str!("scripts/websocket.html"), host, port);
+        let script = format!(include_str!("templates/websocket.html"), host, port);
         file = format!("{text}{script}").into_bytes();
     }
     let mut response: Response = Body::from_bytes(file).into();
