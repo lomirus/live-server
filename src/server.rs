@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use std::sync::Arc;
+use std::{collections::HashMap, io::ErrorKind};
 
 use async_std::{fs, path::PathBuf, prelude::*, sync::Mutex};
 use tide::{listener::Listener, Body, Request, Response, StatusCode};
@@ -103,12 +103,23 @@ async fn static_assets(
         path.push("index.html");
     }
     let mime = mime_guess::from_path(&path).first_or_text_plain();
+    let mut response = Response::new(StatusCode::InternalServerError);
+    response.set_content_type(mime.to_string().as_str());
 
     // Read the file.
     let mut file = match fs::read(&path).await {
         Ok(file) => file,
         Err(err) => {
             log::warn!("{}", err);
+            if mime == "text/html" {
+                let script = format!(include_str!("templates/websocket.html"), host, port);
+                let html = format!(include_str!("templates/error.html"), script, err);
+                response.set_body(Body::from_string(html));
+                if err.kind() == ErrorKind::NotFound {
+                    response.set_status(StatusCode::NotFound);
+                }
+                return Ok(response);
+            }
             return Err(tide::Error::new(StatusCode::NotFound, err));
         }
     };
@@ -122,11 +133,10 @@ async fn static_assets(
                 return Err(tide::Error::from_str(StatusCode::InternalServerError, err));
             }
         };
-        let script = format!(include_str!("scripts/websocket.html"), host, port);
+        let script = format!(include_str!("templates/websocket.html"), host, port);
         file = format!("{text}{script}").into_bytes();
     }
-    let mut response: Response = Body::from_bytes(file).into();
-    response.set_content_type(mime.to_string().as_str());
+    response.set_body(Body::from_bytes(file));
 
     Ok(response)
 }
