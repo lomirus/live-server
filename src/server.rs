@@ -137,6 +137,7 @@ async fn static_assets(
         file = format!("{text}{script}").into_bytes();
     }
     response.set_body(Body::from_bytes(file));
+    response.set_status(StatusCode::Ok);
 
     Ok(response)
 }
