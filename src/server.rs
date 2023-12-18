@@ -113,11 +113,7 @@ async fn static_assets(
             log::warn!("{}", err);
             if mime == "text/html" {
                 let script = format!(include_str!("templates/websocket.html"), host, port);
-                let html = format!(
-                    include_str!("templates/error.html"),
-                    script,
-                    err.to_string()
-                );
+                let html = format!(include_str!("templates/error.html"), script, err);
                 response.set_body(Body::from_string(html));
                 if err.kind() == ErrorKind::NotFound {
                     response.set_status(StatusCode::NotFound);
