@@ -7,15 +7,15 @@ use local_ip_address::local_ip;
 #[derive(Parser)]
 #[clap(version)]
 struct Args {
-    /// Set the listener port
-    #[clap(short, long, default_value_t = 8000)]
-    port: u16,
-    /// Set the listener host [default: LAN IP address]
-    #[clap(short, long)]
-    host: Option<String>,
     /// Set the root path of the static assets
     #[clap(default_value = ".")]
     root: String,
+    /// Set the listener host [default: LAN IP address]
+    #[clap(short='s', long)]
+    host: Option<String>,
+    /// Set the listener port
+    #[clap(short, long, default_value_t = 8000)]
+    port: u16,
 }
 
 #[async_std::main]
