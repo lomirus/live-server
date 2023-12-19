@@ -18,7 +18,7 @@ struct Args {
     port: u16,
 }
 
-#[async_std::main]
+#[tokio::main]
 async fn main() {
     let env = Env::new().default_filter_or("info,tide=error");
     env_logger::init_from_env(env);

@@ -1,22 +1,18 @@
-use std::{
-    collections::HashMap,
-    sync::{mpsc::channel, Arc},
-    time::Duration,
-};
+use std::time::Duration;
 
-use async_std::{fs, path::PathBuf, sync::Mutex};
-use notify::{RecursiveMode, Watcher};
-use notify_debouncer_full::new_debouncer;
-use tide_websockets::{Message, WebSocketConnection};
-use uuid::Uuid;
+use notify::{Error, RecursiveMode, Watcher};
+use notify_debouncer_full::{new_debouncer, DebounceEventResult, DebouncedEvent};
+use tokio::{fs, runtime::Handle, sync::mpsc::channel};
 
-async fn broadcast(connections: &Arc<Mutex<HashMap<Uuid, WebSocketConnection>>>) {
-    for (_, conn) in connections.lock().await.iter() {
-        conn.send(Message::Text(String::new())).await.unwrap();
-    }
+use crate::{ROOT, TX};
+
+async fn broadcast() {
+    let tx = TX.get().unwrap();
+    let _ = tx.send(());
 }
 
-pub async fn watch(root: PathBuf, connections: &Arc<Mutex<HashMap<Uuid, WebSocketConnection>>>) {
+pub async fn watch() {
+    let root = ROOT.get().unwrap();
     let abs_root = match fs::canonicalize(&root).await {
         Ok(path) => path,
         Err(err) => {
@@ -33,19 +29,30 @@ pub async fn watch(root: PathBuf, connections: &Arc<Mutex<HashMap<Uuid, WebSocke
             return;
         }
     };
-
-    let (tx, rx) = channel();
-    let mut debouncer = new_debouncer(Duration::from_millis(200), None, tx).unwrap();
-    let watched_path: std::path::PathBuf = abs_root.into();
+    let rt = Handle::current();
+    let (tx, mut rx) = channel::<Result<Vec<DebouncedEvent>, Vec<Error>>>(16);
+    let mut debouncer = new_debouncer(
+        Duration::from_millis(200),
+        None,
+        move |result: DebounceEventResult| {
+            let tx = tx.clone();
+            rt.spawn(async move {
+                if let Err(err) = tx.send(result).await {
+                    log::error!("Failed to send event result: {}", err);
+                }
+            });
+        },
+    )
+    .unwrap();
     debouncer
         .watcher()
-        .watch(watched_path.as_path(), RecursiveMode::Recursive)
+        .watch(&abs_root, RecursiveMode::Recursive)
         .unwrap();
     debouncer
         .cache()
-        .add_root(watched_path.as_path(), RecursiveMode::Recursive);
+        .add_root(&abs_root, RecursiveMode::Recursive);
 
-    for result in rx {
+    while let Some(result) = rx.recv().await {
         let mut files_changed = false;
         match result {
             Ok(events) => {
@@ -67,8 +74,8 @@ pub async fn watch(root: PathBuf, connections: &Arc<Mutex<HashMap<Uuid, WebSocke
                                         let target_name = &e.event.paths[1];
                                         log::debug!(
                                             "[RENAME] {} -> {}",
-                                            strip_prefix(source_name, &watched_path),
-                                            strip_prefix(target_name, &watched_path)
+                                            strip_prefix(source_name, &abs_root),
+                                            strip_prefix(target_name, &abs_root)
                                         );
                                         files_changed = true;
                                     }
@@ -96,7 +103,7 @@ pub async fn watch(root: PathBuf, connections: &Arc<Mutex<HashMap<Uuid, WebSocke
             }
         }
         if files_changed {
-            broadcast(connections).await;
+            broadcast().await;
         }
     }
 }
