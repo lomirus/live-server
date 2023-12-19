@@ -13,13 +13,12 @@ keywords = ["live", "server", "web"]
 
 [dependencies]
 notify = "6.1.1"
-tide = "0.16.0"
-async-std = { version = "1.10.0", features = ["attributes"] }
-tide-websockets = "0.4.0"
-uuid = { version = "1.6.1", features = ["v4"] }
 clap = { version = "4.4.11", features = ["derive"] }
-mime_guess = "2.0.3"
 local-ip-address = "0.5.6"
 log = "0.4.17"
 env_logger = "0.10.1"
 notify-debouncer-full = "0.3.1"
+tokio = { version = "1.35.0", features = ["full"] }
+axum = { version = "0.7.2", features = ["ws"]}
+futures = "0.3.29"
+mime_guess = "2.0.3"

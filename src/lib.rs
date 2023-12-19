@@ -14,9 +14,14 @@
 mod server;
 mod watcher;
 
-use std::{collections::HashMap, sync::Arc};
+use std::{error::Error, path::PathBuf};
 
-use async_std::{path::PathBuf, sync::Mutex, task};
+use tokio::sync::{broadcast, OnceCell};
+
+static HOST: OnceCell<String> = OnceCell::const_new();
+static PORT: OnceCell<u16> = OnceCell::const_new();
+static ROOT: OnceCell<PathBuf> = OnceCell::const_new();
+static TX: OnceCell<broadcast::Sender<()>> = OnceCell::const_new();
 
 /// Watch the directory and create a static server.
 /// ```
@@ -27,12 +32,16 @@ pub async fn listen<R: Into<PathBuf>>(
     host: &str,
     port: u16,
     root: R,
-) -> Result<(), std::io::Error> {
-    let connections1 = Arc::new(Mutex::new(HashMap::new()));
-    let connections2 = Arc::clone(&connections1);
-    let root1: PathBuf = root.into();
-    let root2: PathBuf = root1.clone();
+) -> Result<(), Box<dyn Error>> {
+    HOST.set(host.to_string()).unwrap();
+    ROOT.set(root.into()).unwrap();
+    let (tx, _) = broadcast::channel(16);
+    TX.set(tx).unwrap();
 
-    task::spawn(async move { watcher::watch(root1, &connections1).await });
-    server::serve(host, port, root2, connections2).await
+    let watcher_future = tokio::spawn(watcher::watch());
+    let server_future = tokio::spawn(server::serve(port));
+
+    tokio::try_join!(watcher_future, server_future)?;
+
+    Ok(())
 }
