@@ -12,7 +12,7 @@ async fn request() {
             .unwrap();
     });
 
-    sleep(Duration::from_secs(5)).await;
+    sleep(Duration::from_millis(2000)).await;
 
     // Test requesting index.html
     let response = reqwest::get("http://127.0.0.1:8000").await.unwrap();
