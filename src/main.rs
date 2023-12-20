@@ -11,7 +11,7 @@ struct Args {
     #[clap(default_value = ".")]
     root: String,
     /// Set the listener host [default: LAN IP address]
-    #[clap(short = 's', long)]
+    #[clap(short = 'H', long)]
     host: Option<String>,
     /// Set the listener port
     #[clap(short, long, default_value_t = 8000)]

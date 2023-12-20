@@ -33,7 +33,7 @@ Arguments:
   [ROOT]  Set the root path of the static assets [default: .]
 
 Options:
-  -s, --host <HOST>  Set the listener host [default: LAN IP address]
+  -H, --host <HOST>  Set the listener host [default: LAN IP address]
   -p, --port <PORT>  Set the listener port [default: 8000]
   -h, --help         Print help
   -V, --version      Print version
