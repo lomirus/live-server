@@ -22,3 +22,4 @@ jobs:
           default: true
       - run: cargo fmt --check
       - run: cargo clippy
+      - run: cargo test
