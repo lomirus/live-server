@@ -4,7 +4,9 @@ use reqwest::StatusCode;
 #[tokio::test]
 async fn request() {
     tokio::spawn(async {
-        listen("127.0.0.1", 8000, "./tests/page", false).await.unwrap();
+        listen("127.0.0.1", 8000, "./tests/page", false)
+            .await
+            .unwrap();
     });
 
     // Test requesting index.html

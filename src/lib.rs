@@ -38,7 +38,7 @@ pub async fn listen<R: Into<PathBuf>>(
     host: &str,
     port: u16,
     root: R,
-    try_to_switch_to_an_available_port: bool
+    try_to_switch_to_an_available_port: bool,
 ) -> Result<(), Box<dyn Error>> {
     HOST.set(host.to_string()).unwrap();
     ROOT.set(root.into()).unwrap();
