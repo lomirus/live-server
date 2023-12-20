@@ -37,13 +37,13 @@ static TX: OnceCell<broadcast::Sender<()>> = OnceCell::const_new();
 /// When the `port` you specified is unavailable and `switch_port`
 /// is set to `true`, live-server will try to switch to `8081`
 /// and then `8082` until it finds an available port.
-pub async fn listen<R: Into<PathBuf>>(
-    host: &str,
+pub async fn listen<H: Into<String>, R: Into<PathBuf>>(
+    host: H,
     port: u16,
     root: R,
     switch_port: bool,
 ) -> Result<(), Box<dyn Error>> {
-    HOST.set(host.to_string()).unwrap();
+    HOST.set(host.into()).unwrap();
     ROOT.set(root.into()).unwrap();
     let (tx, _) = broadcast::channel(16);
     TX.set(tx).unwrap();
