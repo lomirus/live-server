@@ -34,11 +34,14 @@ static TX: OnceCell<broadcast::Sender<()>> = OnceCell::const_new();
 ///     listen("127.0.0.1", 8080, "./", true).await.unwrap();
 /// }
 /// ```
+/// When the `port` you specified is unavailable and `switch_port`
+/// is set to `true`, live-server will try to switch to `8081`
+/// and then `8082` until it finds an available port.
 pub async fn listen<R: Into<PathBuf>>(
     host: &str,
     port: u16,
     root: R,
-    try_to_switch_to_an_available_port: bool,
+    switch_port: bool,
 ) -> Result<(), Box<dyn Error>> {
     HOST.set(host.to_string()).unwrap();
     ROOT.set(root.into()).unwrap();
@@ -46,7 +49,7 @@ pub async fn listen<R: Into<PathBuf>>(
     TX.set(tx).unwrap();
 
     let watcher_future = tokio::spawn(watcher::watch());
-    let server_future = tokio::spawn(server::serve(port, try_to_switch_to_an_available_port));
+    let server_future = tokio::spawn(server::serve(port, switch_port));
 
     let (_, server_result) = tokio::try_join!(watcher_future, server_future)?;
     server_result?;
