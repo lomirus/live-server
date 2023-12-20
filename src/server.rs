@@ -13,13 +13,15 @@ use tokio::net::TcpListener;
 
 use crate::{HOST, PORT, ROOT, TX};
 
-pub async fn serve(port: u16) {
-    let listener = create_listener(port).await;
+pub async fn serve(port: u16, switch_port: bool) -> Result<(), String> {
+    let listener = create_listener(port, switch_port).await?;
     let app = create_server();
     axum::serve(listener, app).await.unwrap();
+
+    Ok(())
 }
 
-async fn create_listener(port: u16) -> TcpListener {
+async fn create_listener(port: u16, switch_port: bool) -> Result<TcpListener, String> {
     let host = HOST.get().unwrap();
     let mut port = port;
     // Loop until the port is available
@@ -28,12 +30,17 @@ async fn create_listener(port: u16) -> TcpListener {
             Ok(listener) => {
                 log::info!("Listening on http://{}:{}/", host, port);
                 PORT.set(port).unwrap();
-                break listener;
+                break Ok(listener);
             }
             Err(err) => {
                 if let std::io::ErrorKind::AddrInUse = err.kind() {
-                    log::warn!("Port {} is already in use", port);
-                    port += 1;
+                    if switch_port {
+                        log::warn!("Port {} is already in use", port);
+                        port += 1;
+                    } else {
+                        log::error!("Port {} is already in use", port);
+                        return Err(format!("Port {} is already in use", port));
+                    }
                 } else {
                     log::error!("Failed to listen on {}:{}: {}", host, port, err);
                 }

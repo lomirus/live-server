@@ -38,5 +38,5 @@ async fn main() {
         },
     };
 
-    listen(&host, args.port, args.root).await.unwrap();
+    listen(&host, args.port, args.root, true).await.unwrap();
 }

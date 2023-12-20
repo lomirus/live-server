@@ -3,7 +3,10 @@
 //! ## Create live server
 //! ```
 //! use live_server::listen;
-//! listen("127.0.0.1", 8080, "./").await.unwrap();
+//!
+//! async fn serve() {
+//!     listen("127.0.0.1", 8080, "./", true).await.unwrap();
+//! }
 //! ```
 //!
 //! ## Enable logs (Optional)
@@ -26,12 +29,19 @@ static TX: OnceCell<broadcast::Sender<()>> = OnceCell::const_new();
 /// Watch the directory and create a static server.
 /// ```
 /// use live_server::listen;
-/// listen("127.0.0.1", 8080, "./").await.unwrap();
+///
+/// async fn serve() {
+///     listen("127.0.0.1", 8080, "./", true).await.unwrap();
+/// }
 /// ```
+/// When the `port` you specified is unavailable and `switch_port`
+/// is set to `true`, live-server will try to switch to `8081`
+/// and then `8082` until it finds an available port.
 pub async fn listen<R: Into<PathBuf>>(
     host: &str,
     port: u16,
     root: R,
+    switch_port: bool,
 ) -> Result<(), Box<dyn Error>> {
     HOST.set(host.to_string()).unwrap();
     ROOT.set(root.into()).unwrap();
@@ -39,9 +49,10 @@ pub async fn listen<R: Into<PathBuf>>(
     TX.set(tx).unwrap();
 
     let watcher_future = tokio::spawn(watcher::watch());
-    let server_future = tokio::spawn(server::serve(port));
+    let server_future = tokio::spawn(server::serve(port, switch_port));
 
-    tokio::try_join!(watcher_future, server_future)?;
+    let (_, server_result) = tokio::try_join!(watcher_future, server_future)?;
+    server_result?;
 
     Ok(())
 }
