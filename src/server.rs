@@ -21,10 +21,7 @@ pub async fn serve(port: u16, switch_port: bool) -> Result<(), String> {
     Ok(())
 }
 
-async fn create_listener(
-    port: u16,
-    switch_port: bool,
-) -> Result<TcpListener, String> {
+async fn create_listener(port: u16, switch_port: bool) -> Result<TcpListener, String> {
     let host = HOST.get().unwrap();
     let mut port = port;
     // Loop until the port is available
