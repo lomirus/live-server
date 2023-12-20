@@ -19,7 +19,10 @@ async fn request() {
     let target_text = format!(
         "{}{}",
         include_str!("./page/index.html"),
-        format!(include_str!("../src/templates/websocket.html"), "127.0.0.1", 8000)
+        format!(
+            include_str!("../src/templates/websocket.html"),
+            "127.0.0.1", 8000
+        )
     )
     .replace("\r\n", "\n");
     assert_eq!(text, target_text);
@@ -38,7 +41,7 @@ async fn request() {
     let target_text = include_str!("./page/index.js").replace("\r\n", "\n");
     assert_eq!(text, target_text);
 
-    // Test requesting non-existent html file 
+    // Test requesting non-existent html file
     let response = reqwest::get("http://127.0.0.1:8000/404.html")
         .await
         .unwrap();
@@ -51,7 +54,7 @@ async fn request() {
     let text = response.text().await.unwrap();
     assert!(text.starts_with("<!DOCTYPE html>"));
 
-    // Test requesting non-existent asset 
+    // Test requesting non-existent asset
     let response = reqwest::get("http://127.0.0.1:8000/favicon.ico")
         .await
         .unwrap();

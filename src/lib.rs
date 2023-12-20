@@ -3,7 +3,7 @@
 //! ## Create live server
 //! ```
 //! use live_server::listen;
-//! 
+//!
 //! async fn serve() {
 //!     listen("127.0.0.1", 8080, "./").await.unwrap();
 //! }
@@ -29,7 +29,7 @@ static TX: OnceCell<broadcast::Sender<()>> = OnceCell::const_new();
 /// Watch the directory and create a static server.
 /// ```
 /// use live_server::listen;
-/// 
+///
 /// async fn serve() {
 ///     listen("127.0.0.1", 8080, "./").await.unwrap();
 /// }
