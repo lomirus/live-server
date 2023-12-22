@@ -17,10 +17,11 @@
 mod server;
 mod watcher;
 
-use std::{error::Error, path::PathBuf};
+use std::{error::Error, net::IpAddr, path::PathBuf};
 
 use axum::Router;
-use notify::ReadDirectoryChangesWatcher;
+use local_ip_address::local_ip;
+use notify::RecommendedWatcher;
 use notify_debouncer_full::{DebouncedEvent, Debouncer, FileIdMap};
 use server::{create_listener, create_server};
 use tokio::{
@@ -37,13 +38,13 @@ pub struct Listener {
     tcp_listener: TcpListener,
     router: Router,
     root_path: PathBuf,
-    debouncer: Debouncer<ReadDirectoryChangesWatcher, FileIdMap>,
+    debouncer: Debouncer<RecommendedWatcher, FileIdMap>,
     rx: Receiver<Result<Vec<DebouncedEvent>, Vec<notify::Error>>>,
 }
 
 impl Listener {
     /// Start live-server
-    /// 
+    ///
     /// ```
     /// use live_server::listen;
     ///
@@ -52,9 +53,9 @@ impl Listener {
     /// }
     /// ```
     pub async fn start(self) -> Result<(), Box<dyn Error>> {
-        ROOT.set(self.root_path.clone()).unwrap();
+        ROOT.set(self.root_path.clone())?;
         let (tx, _) = broadcast::channel(16);
-        TX.set(tx).unwrap();
+        TX.set(tx)?;
 
         let watcher_future = tokio::spawn(watcher::watch(self.root_path, self.debouncer, self.rx));
         let server_future = tokio::spawn(server::serve(self.tcp_listener, self.router));
@@ -63,11 +64,25 @@ impl Listener {
 
         Ok(())
     }
+
+    pub fn link(&self) -> Result<String, Box<dyn Error>> {
+        let addr = self.tcp_listener.local_addr()?;
+        let port = addr.port();
+        let host = addr.ip();
+        let host = match host.is_unspecified() {
+            true => local_ip()?,
+            false => host,
+        };
+
+        Ok(match host {
+            IpAddr::V4(host) => format!("http://{host}:{port}"),
+            IpAddr::V6(host) => format!("http://[{host}]:{port}"),
+        })
+    }
 }
 
-
 /// Create live-server listener
-/// 
+///
 /// ```
 /// use live_server::listen;
 ///

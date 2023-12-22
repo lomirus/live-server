@@ -1,6 +1,6 @@
 use std::{path::PathBuf, time::Duration};
 
-use notify::{Error, ReadDirectoryChangesWatcher, RecursiveMode, Watcher};
+use notify::{Error, RecommendedWatcher, RecursiveMode, Watcher};
 use notify_debouncer_full::{
     new_debouncer, DebounceEventResult, DebouncedEvent, Debouncer, FileIdMap,
 };
@@ -21,7 +21,7 @@ pub(crate) async fn create_watcher(
     root: PathBuf,
 ) -> Result<
     (
-        Debouncer<ReadDirectoryChangesWatcher, FileIdMap>,
+        Debouncer<RecommendedWatcher, FileIdMap>,
         PathBuf,
         Receiver<Result<Vec<DebouncedEvent>, Vec<Error>>>,
     ),
@@ -65,7 +65,7 @@ pub(crate) async fn create_watcher(
 
 pub async fn watch(
     root_path: PathBuf,
-    mut debouncer: Debouncer<ReadDirectoryChangesWatcher, FileIdMap>,
+    mut debouncer: Debouncer<RecommendedWatcher, FileIdMap>,
     mut rx: Receiver<Result<Vec<DebouncedEvent>, Vec<Error>>>,
 ) {
     debouncer
