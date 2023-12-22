@@ -21,7 +21,7 @@ use std::{error::Error, net::IpAddr, path::PathBuf};
 
 use axum::Router;
 use local_ip_address::local_ip;
-use notify::ReadDirectoryChangesWatcher;
+use notify::RecommendedWatcher;
 use notify_debouncer_full::{DebouncedEvent, Debouncer, FileIdMap};
 use server::{create_listener, create_server};
 use tokio::{
@@ -38,7 +38,7 @@ pub struct Listener {
     tcp_listener: TcpListener,
     router: Router,
     root_path: PathBuf,
-    debouncer: Debouncer<ReadDirectoryChangesWatcher, FileIdMap>,
+    debouncer: Debouncer<RecommendedWatcher, FileIdMap>,
     rx: Receiver<Result<Vec<DebouncedEvent>, Vec<notify::Error>>>,
 }
 
