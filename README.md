@@ -51,7 +51,7 @@ You can also import it as a library in your project.
 
 ```rust
 use live_server::listen;
-listen("127.0.0.1", 8080, "./", true).await.unwrap();
+listen("127.0.0.1", 8080, "./").await.unwrap();
 ```
 
 ### Enable logs (Optional)
