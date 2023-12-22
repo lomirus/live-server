@@ -24,5 +24,7 @@ async fn main() {
 
     let Args { host, port, root } = Args::parse();
 
-    listen(host, port, root).await.unwrap();
+    let addr = format!("{}:{}", host, port);
+
+    listen(addr, root).await.unwrap();
 }

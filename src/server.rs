@@ -14,16 +14,16 @@ use tokio::net::TcpListener;
 
 use crate::{HOST, PORT, ROOT, TX};
 
-pub async fn serve(host: String, port: u16) -> Result<(), String> {
-    let listener = create_listener(host, port).await?;
+pub async fn serve(addr: String) -> Result<(), String> {
+    let listener = create_listener(addr).await?;
     let app = create_server();
     axum::serve(listener, app).await.unwrap();
 
     Ok(())
 }
 
-async fn create_listener(host: String, port: u16) -> Result<TcpListener, String> {
-    match tokio::net::TcpListener::bind(format!("{host}:{port}")).await {
+async fn create_listener(addr: String) -> Result<TcpListener, String> {
+    match tokio::net::TcpListener::bind(&addr).await {
         Ok(listener) => {
             let port = listener.local_addr().unwrap().port();
             let host = listener.local_addr().unwrap().ip();
@@ -44,9 +44,9 @@ async fn create_listener(host: String, port: u16) -> Result<TcpListener, String>
         }
         Err(err) => {
             let err_msg = if let std::io::ErrorKind::AddrInUse = err.kind() {
-                format!("Port {} is already in use", port)
+                format!("Address {} is already in use", &addr)
             } else {
-                format!("Failed to listen on {}:{}: {}", host, port, err)
+                format!("Failed to listen on {}: {}", addr, err)
             };
             log::error!("{err_msg}");
             Err(err_msg)
