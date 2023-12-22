@@ -1,23 +1,38 @@
-use std::time::Duration;
+use std::{path::PathBuf, time::Duration};
 
-use notify::{Error, RecursiveMode, Watcher};
-use notify_debouncer_full::{new_debouncer, DebounceEventResult, DebouncedEvent};
-use tokio::{fs, runtime::Handle, sync::mpsc::channel};
+use notify::{Error, ReadDirectoryChangesWatcher, RecursiveMode, Watcher};
+use notify_debouncer_full::{
+    new_debouncer, DebounceEventResult, DebouncedEvent, Debouncer, FileIdMap,
+};
+use tokio::{
+    fs,
+    runtime::Handle,
+    sync::mpsc::{channel, Receiver},
+};
 
-use crate::{ROOT, TX};
+use crate::TX;
 
 async fn broadcast() {
     let tx = TX.get().unwrap();
     let _ = tx.send(());
 }
 
-pub async fn watch() {
-    let root = ROOT.get().unwrap();
+pub(crate) async fn create_watcher(
+    root: PathBuf,
+) -> Result<
+    (
+        Debouncer<ReadDirectoryChangesWatcher, FileIdMap>,
+        PathBuf,
+        Receiver<Result<Vec<DebouncedEvent>, Vec<Error>>>,
+    ),
+    String,
+> {
     let abs_root = match fs::canonicalize(&root).await {
         Ok(path) => path,
         Err(err) => {
-            log::error!("Failed to get absolute path of {:?}: {}", root, err);
-            return;
+            let err_msg = format!("Failed to get absolute path of {:?}: {}", root, err);
+            log::error!("{}", err_msg);
+            return Err(err_msg);
         }
     };
     match abs_root.clone().into_os_string().into_string() {
@@ -25,13 +40,14 @@ pub async fn watch() {
             log::info!("Listening on {}", path_str);
         }
         Err(_) => {
-            log::error!("Failed to parse path to string for `{:?}`", abs_root);
-            return;
+            let err_msg = format!("Failed to parse path to string for `{:?}`", abs_root);
+            log::error!("{}", err_msg);
+            return Err(err_msg);
         }
     };
     let rt = Handle::current();
-    let (tx, mut rx) = channel::<Result<Vec<DebouncedEvent>, Vec<Error>>>(16);
-    let mut debouncer = new_debouncer(
+    let (tx, rx) = channel::<Result<Vec<DebouncedEvent>, Vec<Error>>>(16);
+    new_debouncer(
         Duration::from_millis(200),
         None,
         move |result: DebounceEventResult| {
@@ -43,14 +59,22 @@ pub async fn watch() {
             });
         },
     )
-    .unwrap();
+    .map(|d| (d, abs_root, rx))
+    .map_err(|e| e.to_string())
+}
+
+pub async fn watch(
+    root_path: PathBuf,
+    mut debouncer: Debouncer<ReadDirectoryChangesWatcher, FileIdMap>,
+    mut rx: Receiver<Result<Vec<DebouncedEvent>, Vec<Error>>>,
+) {
     debouncer
         .watcher()
-        .watch(&abs_root, RecursiveMode::Recursive)
+        .watch(&root_path, RecursiveMode::Recursive)
         .unwrap();
     debouncer
         .cache()
-        .add_root(&abs_root, RecursiveMode::Recursive);
+        .add_root(&root_path, RecursiveMode::Recursive);
 
     while let Some(result) = rx.recv().await {
         let mut files_changed = false;
@@ -74,8 +98,8 @@ pub async fn watch() {
                                         let target_name = &e.event.paths[1];
                                         log::debug!(
                                             "[RENAME] {} -> {}",
-                                            strip_prefix(source_name, &abs_root),
-                                            strip_prefix(target_name, &abs_root)
+                                            strip_prefix(source_name, &root_path),
+                                            strip_prefix(target_name, &root_path)
                                         );
                                         files_changed = true;
                                     }

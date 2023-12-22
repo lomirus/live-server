@@ -14,15 +14,11 @@ use tokio::net::TcpListener;
 
 use crate::{ADDR, ROOT, TX};
 
-pub async fn serve(addr: String) -> Result<(), String> {
-    let listener = create_listener(addr).await?;
-    let app = create_server();
-    axum::serve(listener, app).await.unwrap();
-
-    Ok(())
+pub(crate) async fn serve(tcp_listener: TcpListener, router: Router) {
+    axum::serve(tcp_listener, router).await.unwrap();
 }
 
-async fn create_listener(addr: String) -> Result<TcpListener, String> {
+pub(crate) async fn create_listener(addr: String) -> Result<TcpListener, String> {
     match tokio::net::TcpListener::bind(&addr).await {
         Ok(listener) => {
             let port = listener.local_addr().unwrap().port();
@@ -58,7 +54,7 @@ async fn create_listener(addr: String) -> Result<TcpListener, String> {
     }
 }
 
-fn create_server() -> Router {
+pub(crate) fn create_server() -> Router {
     Router::new()
         .route("/", get(static_assets))
         .route("/*path", get(static_assets))

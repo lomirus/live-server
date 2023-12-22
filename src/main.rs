@@ -26,5 +26,5 @@ async fn main() {
 
     let addr = format!("{}:{}", host, port);
 
-    listen(addr, root).await.unwrap();
+    listen(addr, root).await.unwrap().start().await.unwrap();
 }
