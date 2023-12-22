@@ -39,10 +39,10 @@ async fn create_listener(addr: String) -> Result<TcpListener, String> {
             };
 
             let addr = match host {
-                IpAddr::V4(host) => format!("{host}:{port}/"),
-                IpAddr::V6(host) => format!("[{host}]:{port}/"),
+                IpAddr::V4(host) => format!("{host}:{port}"),
+                IpAddr::V6(host) => format!("[{host}]:{port}"),
             };
-            log::info!("Listening on http://{addr}");
+            log::info!("Listening on http://{addr}/");
             ADDR.set(addr).unwrap();
             Ok(listener)
         }
