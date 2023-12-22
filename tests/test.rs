@@ -26,7 +26,7 @@ async fn request() {
         include_str!("./page/index.html"),
         format!(
             include_str!("../src/templates/websocket.html"),
-            "127.0.0.1", 8000
+            "127.0.0.1:8000"
         )
     )
     .replace("\r\n", "\n");

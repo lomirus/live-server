@@ -1,5 +1,5 @@
-use std::fs;
 use std::io::ErrorKind;
+use std::{fs, net::IpAddr};
 
 use axum::{
     body::Body,
@@ -12,7 +12,7 @@ use futures::{sink::SinkExt, stream::StreamExt};
 use local_ip_address::local_ip;
 use tokio::net::TcpListener;
 
-use crate::{HOST, PORT, ROOT, TX};
+use crate::{ADDR, ROOT, TX};
 
 pub async fn serve(addr: String) -> Result<(), String> {
     let listener = create_listener(addr).await?;
@@ -37,9 +37,13 @@ async fn create_listener(addr: String) -> Result<TcpListener, String> {
                 },
                 false => host,
             };
-            log::info!("Listening on http://{}:{}/", host, port);
-            HOST.set(host).unwrap();
-            PORT.set(port).unwrap();
+
+            let addr = match host {
+                IpAddr::V4(host) => format!("{host}:{port}/"),
+                IpAddr::V6(host) => format!("[{host}]:{port}/"),
+            };
+            log::info!("Listening on http://{addr}");
+            ADDR.set(addr).unwrap();
             Ok(listener)
         }
         Err(err) => {
@@ -87,8 +91,7 @@ fn create_server() -> Router {
 }
 
 async fn static_assets(req: Request<Body>) -> (StatusCode, HeaderMap, Body) {
-    let host = HOST.get().unwrap();
-    let port = PORT.get().unwrap();
+    let addr = ADDR.get().unwrap();
     let root = ROOT.get().unwrap();
 
     // Get the path and mime of the static file.
@@ -118,7 +121,7 @@ async fn static_assets(req: Request<Body>) -> (StatusCode, HeaderMap, Body) {
                 _ => StatusCode::INTERNAL_SERVER_ERROR,
             };
             if mime == "text/html" {
-                let script = format!(include_str!("templates/websocket.html"), host, port);
+                let script = format!(include_str!("templates/websocket.html"), addr);
                 let html = format!(include_str!("templates/error.html"), script, err);
                 let body = Body::from(html);
 
@@ -138,7 +141,7 @@ async fn static_assets(req: Request<Body>) -> (StatusCode, HeaderMap, Body) {
                 return (StatusCode::INTERNAL_SERVER_ERROR, headers, body);
             }
         };
-        let script = format!(include_str!("templates/websocket.html"), host, port);
+        let script = format!(include_str!("templates/websocket.html"), addr);
         file = format!("{text}{script}").into_bytes();
     }
 

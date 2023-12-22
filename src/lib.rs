@@ -17,12 +17,11 @@
 mod server;
 mod watcher;
 
-use std::{error::Error, net::IpAddr, path::PathBuf};
+use std::{error::Error, path::PathBuf};
 
 use tokio::sync::{broadcast, OnceCell};
 
-static HOST: OnceCell<IpAddr> = OnceCell::const_new();
-static PORT: OnceCell<u16> = OnceCell::const_new();
+static ADDR: OnceCell<String> = OnceCell::const_new();
 static ROOT: OnceCell<PathBuf> = OnceCell::const_new();
 static TX: OnceCell<broadcast::Sender<()>> = OnceCell::const_new();
 
