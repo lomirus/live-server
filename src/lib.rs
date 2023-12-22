@@ -17,7 +17,7 @@
 mod server;
 mod watcher;
 
-use std::{error::Error, path::PathBuf, net::IpAddr};
+use std::{error::Error, net::IpAddr, path::PathBuf};
 
 use tokio::sync::{broadcast, OnceCell};
 
