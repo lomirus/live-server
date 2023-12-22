@@ -17,11 +17,11 @@
 mod server;
 mod watcher;
 
-use std::{error::Error, path::PathBuf};
+use std::{error::Error, path::PathBuf, net::IpAddr};
 
 use tokio::sync::{broadcast, OnceCell};
 
-static HOST: OnceCell<String> = OnceCell::const_new();
+static HOST: OnceCell<IpAddr> = OnceCell::const_new();
 static PORT: OnceCell<u16> = OnceCell::const_new();
 static ROOT: OnceCell<PathBuf> = OnceCell::const_new();
 static TX: OnceCell<broadcast::Sender<()>> = OnceCell::const_new();
@@ -42,13 +42,12 @@ pub async fn listen<H: Into<String>, R: Into<PathBuf>>(
     port: u16,
     root: R,
 ) -> Result<(), Box<dyn Error>> {
-    HOST.set(host.into()).unwrap();
     ROOT.set(root.into()).unwrap();
     let (tx, _) = broadcast::channel(16);
     TX.set(tx).unwrap();
 
     let watcher_future = tokio::spawn(watcher::watch());
-    let server_future = tokio::spawn(server::serve(port));
+    let server_future = tokio::spawn(server::serve(host.into(), port));
 
     let (_, server_result) = tokio::try_join!(watcher_future, server_future)?;
     server_result?;

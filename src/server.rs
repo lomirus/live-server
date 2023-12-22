@@ -9,24 +9,36 @@ use axum::{
     Router,
 };
 use futures::{sink::SinkExt, stream::StreamExt};
+use local_ip_address::local_ip;
 use tokio::net::TcpListener;
 
 use crate::{HOST, PORT, ROOT, TX};
 
-pub async fn serve(port: u16) -> Result<(), String> {
-    let listener = create_listener(port).await?;
+pub async fn serve(host: String, port: u16) -> Result<(), String> {
+    let listener = create_listener(host, port).await?;
     let app = create_server();
     axum::serve(listener, app).await.unwrap();
 
     Ok(())
 }
 
-async fn create_listener(port: u16) -> Result<TcpListener, String> {
-    let host = HOST.get().unwrap();
+async fn create_listener(host: String, port: u16) -> Result<TcpListener, String> {
     match tokio::net::TcpListener::bind(format!("{host}:{port}")).await {
         Ok(listener) => {
             let port = listener.local_addr().unwrap().port();
+            let host = listener.local_addr().unwrap().ip();
+            let host = match host.is_unspecified() {
+                true => match local_ip() {
+                    Ok(addr) => addr,
+                    Err(err) => {
+                        log::warn!("Failed to get local IP address: {}", err);
+                        host
+                    }
+                },
+                false => host,
+            };
             log::info!("Listening on http://{}:{}/", host, port);
+            HOST.set(host).unwrap();
             PORT.set(port).unwrap();
             Ok(listener)
         }
