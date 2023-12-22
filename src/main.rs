@@ -14,7 +14,7 @@ struct Args {
     #[clap(short = 'H', long)]
     host: Option<String>,
     /// Set the listener port
-    #[clap(short, long, default_value_t = 8000)]
+    #[clap(short, long, default_value = "0")]
     port: u16,
 }
 
@@ -38,5 +38,5 @@ async fn main() {
         },
     };
 
-    listen(&host, args.port, args.root, true).await.unwrap();
+    listen(&host, args.port, args.root).await.unwrap();
 }

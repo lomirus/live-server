@@ -7,9 +7,7 @@ use tokio::time::sleep;
 #[tokio::test]
 async fn request() {
     tokio::spawn(async {
-        listen("127.0.0.1", 8000, "./tests/page", false)
-            .await
-            .unwrap();
+        listen("127.0.0.1", 8000, "./tests/page").await.unwrap();
     });
 
     sleep(Duration::from_millis(2000)).await;

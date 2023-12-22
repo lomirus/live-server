@@ -5,7 +5,7 @@
 //! use live_server::listen;
 //!
 //! async fn serve() {
-//!     listen("127.0.0.1", 8080, "./", true).await.unwrap();
+//!     listen("127.0.0.1", 8080, "./").await.unwrap();
 //! }
 //! ```
 //!
@@ -31,7 +31,7 @@ static TX: OnceCell<broadcast::Sender<()>> = OnceCell::const_new();
 /// use live_server::listen;
 ///
 /// async fn serve() {
-///     listen("127.0.0.1", 8080, "./", true).await.unwrap();
+///     listen("127.0.0.1", 8080, "./").await.unwrap();
 /// }
 /// ```
 /// When the `port` you specified is unavailable and `switch_port`
@@ -41,7 +41,6 @@ pub async fn listen<H: Into<String>, R: Into<PathBuf>>(
     host: H,
     port: u16,
     root: R,
-    switch_port: bool,
 ) -> Result<(), Box<dyn Error>> {
     HOST.set(host.into()).unwrap();
     ROOT.set(root.into()).unwrap();
@@ -49,7 +48,7 @@ pub async fn listen<H: Into<String>, R: Into<PathBuf>>(
     TX.set(tx).unwrap();
 
     let watcher_future = tokio::spawn(watcher::watch());
-    let server_future = tokio::spawn(server::serve(port, switch_port));
+    let server_future = tokio::spawn(server::serve(port));
 
     let (_, server_result) = tokio::try_join!(watcher_future, server_future)?;
     server_result?;
