@@ -1,21 +1,12 @@
-use std::time::Duration;
-
 use live_server::listen;
 use reqwest::StatusCode;
-use tokio::time::sleep;
 
 #[tokio::test]
 async fn request() {
+    let listener = listen("127.0.0.1:8000", "./tests/page").await.unwrap();
     tokio::spawn(async {
-        listen("127.0.0.1:8000", "./tests/page")
-            .await
-            .unwrap()
-            .start()
-            .await
-            .unwrap();
+        listener.start().await.unwrap();
     });
-
-    sleep(Duration::from_millis(2000)).await;
 
     // Test requesting index.html
     let response = reqwest::get("http://127.0.0.1:8000").await.unwrap();
