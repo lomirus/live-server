@@ -40,6 +40,12 @@ Options:
   -V, --version      Print version
 ```
 
+```console
+$ live-server
+[2023-12-22T15:16:04Z INFO  live_server::server] Listening on http://10.17.95.220:6634/
+[2023-12-22T15:16:04Z INFO  live_server::watcher] Listening on /home/mirus/html-demo
+```
+
 ### Log Level
 
 You can set different [`RUST_LOG` environment variable](https://rust-lang-nursery.github.io/rust-cookbook/development_tools/debugging/config_log.html) to filter the log. The default log level is `info`.
