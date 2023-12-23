@@ -43,7 +43,7 @@ pub struct Listener {
 }
 
 impl Listener {
-    /// Start live-server
+    /// Start live-server.
     ///
     /// ```
     /// use live_server::listen;
@@ -76,6 +76,9 @@ impl Listener {
     ///     assert_eq!(link, "http://127.0.0.1:8080");
     /// }
     /// ```
+    ///
+    /// This is useful when you did not specify the host or port (e.g. `listen("0.0.0.0:0", ".")`),
+    /// because this method will return the specific address.
     pub fn link(&self) -> Result<String, Box<dyn Error>> {
         let addr = self.tcp_listener.local_addr()?;
         let port = addr.port();
