@@ -66,10 +66,10 @@ impl Listener {
     }
 
     /// Return the link of the server, like `http://127.0.0.1:8080`.
-    /// 
+    ///
     /// ```
     /// use live_server::listen;
-    /// 
+    ///
     /// async fn serve() {
     ///     let listener = listen("127.0.0.1:8080", "./").await.unwrap();
     ///     let link = listener.link().unwrap();
