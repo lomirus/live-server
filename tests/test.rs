@@ -18,15 +18,14 @@ async fn request() {
 
     let text = response.text().await.unwrap().replace("\r\n", "\n");
     let target_text = format!(
-        "{}{}",
+        r#"{}<script>{}("{}", false)</script>"#,
         include_str!("./page/index.html"),
-        format!(
-            include_str!("../src/templates/websocket.html"),
-            "127.0.0.1:8000"
-        )
+        include_str!("../src/templates/websocket.js"),
+        "127.0.0.1:8000"
     )
     .replace("\r\n", "\n");
     assert_eq!(text, target_text);
+    assert!(text.contains("<script>"));
 
     // Test requesting index.js
     let response = reqwest::get("http://127.0.0.1:8000/index.js")
@@ -64,4 +63,34 @@ async fn request() {
 
     let content_type = response.headers().get("content-type").unwrap();
     assert_eq!(content_type, "image/x-icon");
+
+    // Test requesting with reload query
+    let response = reqwest::get("http://127.0.0.1:8000?reload").await.unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let content_type = response.headers().get("content-type").unwrap();
+    assert_eq!(content_type, "text/html");
+
+    let text = response.text().await.unwrap().replace("\r\n", "\n");
+    let target_text = format!(
+        r#"{}<script>{}</script>"#,
+        include_str!("./page/index.html"),
+        include_str!("../src/templates/reload.js"),
+    )
+    .replace("\r\n", "\n");
+    assert_eq!(text, target_text);
+
+    // Test requesting non-existent html file with reload query does not inject script
+    let response = reqwest::get("http://127.0.0.1:8000/404.html?reload")
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::NOT_FOUND);
+
+    let content_type = response.headers().get("content-type").unwrap();
+    assert_eq!(content_type, "text/html");
+
+    let text = response.text().await.unwrap();
+    assert!(!text.contains("<script>"));
 }

@@ -18,6 +18,11 @@ struct Args {
     /// Open the page in browser automatically
     #[clap(short, long)]
     open: bool,
+    /// Hard reload the page on update instead of hot reload
+    ///
+    /// Try using this if the reload is not working as expected
+    #[clap(long)]
+    hard: bool,
 }
 
 #[tokio::main]
@@ -30,14 +35,19 @@ async fn main() {
         port,
         root,
         open,
+        hard,
     } = Args::parse();
 
     let addr = format!("{}:{}", host, port);
-    let listener = listen(addr, root).await.unwrap();
+    let mut listener = listen(addr, root).await.unwrap();
 
     if open {
         let link = listener.link().unwrap();
         open::that(link).unwrap();
+    }
+
+    if hard {
+        listener = listener.hard_reload();
     }
 
     listener.start().await.unwrap();
