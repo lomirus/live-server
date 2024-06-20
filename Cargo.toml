@@ -25,4 +25,4 @@ mime_guess = "2.0.3"
 open = "5.1.4"
 
 [dev-dependencies]
-reqwest = "0.12.3"
+reqwest = "0.12.4"
