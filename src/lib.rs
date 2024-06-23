@@ -32,6 +32,7 @@ use watcher::create_watcher;
 
 static ADDR: OnceCell<String> = OnceCell::const_new();
 static ROOT: OnceCell<PathBuf> = OnceCell::const_new();
+static HARD: OnceCell<bool> = OnceCell::const_new();
 static TX: OnceCell<broadcast::Sender<()>> = OnceCell::const_new();
 
 pub struct Listener {
@@ -40,6 +41,7 @@ pub struct Listener {
     root_path: PathBuf,
     debouncer: Debouncer<RecommendedWatcher, FileIdMap>,
     rx: Receiver<Result<Vec<DebouncedEvent>, Vec<notify::Error>>>,
+    hard: bool,
 }
 
 impl Listener {
@@ -53,6 +55,7 @@ impl Listener {
     /// }
     /// ```
     pub async fn start(self) -> Result<(), Box<dyn Error>> {
+        HARD.set(self.hard)?;
         ROOT.set(self.root_path.clone())?;
         let (tx, _) = broadcast::channel(16);
         TX.set(tx)?;
@@ -63,6 +66,19 @@ impl Listener {
         tokio::try_join!(watcher_future, server_future)?;
 
         Ok(())
+    }
+
+    /// Always hard reload the page instead of hot-reload
+    /// ```
+    /// use live_server::listen;
+    ///
+    /// async fn serve_hard() -> Result<(), Box<dyn std::error::Error>> {
+    ///     listen("127.0.0.1:8080", "./").await?.hard_reload().start().await
+    /// }
+    /// ```
+    pub fn hard_reload(mut self) -> Self {
+        self.hard = true;
+        self
     }
 
     /// Return the link of the server, like `http://127.0.0.1:8080`.
@@ -118,5 +134,6 @@ pub async fn listen<A: Into<String>, R: Into<PathBuf>>(
         debouncer,
         root_path,
         rx,
+        hard: false,
     })
 }
