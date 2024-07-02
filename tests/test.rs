@@ -35,7 +35,7 @@ async fn request() {
     assert_eq!(response.status(), StatusCode::OK);
 
     let content_type = response.headers().get("content-type").unwrap();
-    assert_eq!(content_type, "application/javascript");
+    assert_eq!(content_type, "text/javascript");
 
     let text = response.text().await.unwrap().replace("\r\n", "\n");
     let target_text = include_str!("./page/index.js").replace("\r\n", "\n");
