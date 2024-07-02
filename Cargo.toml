@@ -15,7 +15,7 @@ keywords = ["live", "server", "web", "reload"]
 notify = "6.1.1"
 clap = { version = "4.5.8", features = ["derive"] }
 local-ip-address = "0.6.1"
-log = "0.4.21"
+log = "0.4.22"
 env_logger = "0.10.2"
 notify-debouncer-full = "0.3.1"
 tokio = { version = "1.38.0", features = ["full"] }
