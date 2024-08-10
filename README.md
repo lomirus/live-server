@@ -36,7 +36,8 @@ Options:
   -H, --host <HOST>  Set the listener host [default: 0.0.0.0]
   -p, --port <PORT>  Set the listener port [default: 0]
   -o, --open         Open the page in browser automatically
-  -h, --help         Print help
+      --hard         Hard reload the page on update instead of hot reload
+  -h, --help         Print help (see more with '--help')
   -V, --version      Print version
 ```
 
