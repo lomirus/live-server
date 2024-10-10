@@ -33,12 +33,12 @@ Arguments:
   [ROOT]  Set the root path of the static assets [default: .]
 
 Options:
-  -H, --host <HOST>  Set the listener host [default: 0.0.0.0]
-  -p, --port <PORT>  Set the listener port [default: 0]
-  -o, --open         Open the page in browser automatically
-      --hard         Hard reload the page on update instead of hot reload
-  -h, --help         Print help (see more with '--help')
-  -V, --version      Print version
+  -H, --host <HOST>    Set the listener host [default: 0.0.0.0]
+  -p, --port <PORT>    Set the listener port [default: 0]
+  -o, --open [<PAGE>]  Open the page in browser automatically
+      --hard           Hard reload the page on update instead of hot reload
+  -h, --help           Print help (see more with '--help')
+  -V, --version        Print version
 ```
 
 ```console

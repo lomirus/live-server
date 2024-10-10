@@ -16,8 +16,8 @@ struct Args {
     #[clap(short, long, default_value = "0")]
     port: u16,
     /// Open the page in browser automatically
-    #[clap(short, long)]
-    open: bool,
+    #[clap(short, long, value_name = "PAGE")]
+    open: Option<Option<String>>,
     /// Hard reload the page on update instead of hot reload
     ///
     /// Try using this if the reload is not working as expected
@@ -41,9 +41,10 @@ async fn main() {
     let addr = format!("{}:{}", host, port);
     let mut listener = listen(addr, root).await.unwrap();
 
-    if open {
-        let link = listener.link().unwrap();
-        open::that(link).unwrap();
+    if let Some(page) = open {
+        let origin = listener.link().unwrap();
+        let path = page.unwrap_or_default();
+        open::that(format!("{origin}/{path}")).unwrap();
     }
 
     if hard {
