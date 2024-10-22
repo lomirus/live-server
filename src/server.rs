@@ -160,6 +160,7 @@ async fn static_assets(req: Request<Body>) -> (StatusCode, HeaderMap, Body) {
                 let script = format_script(addr, is_reload, false);
                 let html = format!(
                     include_str!("templates/index.html"),
+                    uri_path,
                     script,
                     get_index_listing(uri_path)
                 );
