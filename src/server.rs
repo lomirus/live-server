@@ -13,7 +13,7 @@ use futures::{sink::SinkExt, stream::StreamExt};
 use local_ip_address::local_ip;
 use tokio::net::TcpListener;
 
-use crate::{ADDR, HARD, ROOT, TX};
+use crate::{ADDR, HARD, INDEX, ROOT, TX};
 
 pub(crate) async fn serve(tcp_listener: TcpListener, router: Router) {
     axum::serve(tcp_listener, router).await.unwrap();
@@ -87,15 +87,52 @@ async fn on_websocket_upgrade(socket: WebSocket) {
     };
 }
 
+fn get_index_listing(uri_path: &str) -> String {
+    let is_root = uri_path == "/";
+    let path = ROOT.get().unwrap().join(&uri_path[1..]);
+    let entries = fs::read_dir(path).unwrap();
+    let mut entry_names = entries
+        .into_iter()
+        .filter_map(|e| match e {
+            Ok(entry) => {
+                let trailing = if entry.metadata().unwrap().is_dir() {
+                    "/"
+                } else {
+                    ""
+                };
+                Some(format!(
+                    "{}{}",
+                    entry.file_name().to_str().unwrap(),
+                    trailing
+                ))
+            }
+            Err(_) => None,
+        })
+        .collect::<Vec<String>>();
+    entry_names.sort();
+    let mut out = entry_names
+        .into_iter()
+        .map(|en| format!("<li><a href=\"{}\">{}</a></li>", en, en))
+        .fold(String::new(), |existing, new| {
+            format!("{}\n{}", existing, new)
+        });
+    if !is_root {
+        out = format!("<li><a href=\"..\">..</a></li>\n{}", out);
+    }
+    return out;
+}
+
 async fn static_assets(req: Request<Body>) -> (StatusCode, HeaderMap, Body) {
     let addr = ADDR.get().unwrap();
     let root = ROOT.get().unwrap();
+    let index = INDEX.get().unwrap();
 
     let is_reload = req.uri().query().is_some_and(|x| x == "reload");
 
     // Get the path and mime of the static file.
     let uri_path = req.uri().path();
     let mut path = root.join(&uri_path[1..]);
+    let mut reading_index = false;
     if path.is_dir() {
         if !uri_path.ends_with('/') {
             // redirect so parent links work correctly
@@ -105,6 +142,7 @@ async fn static_assets(req: Request<Body>) -> (StatusCode, HeaderMap, Body) {
             return (StatusCode::TEMPORARY_REDIRECT, headers, Body::empty());
         }
         path.push("index.html");
+        reading_index = true;
     }
     let mime = mime_guess::from_path(&path).first_or_text_plain();
 
@@ -118,6 +156,16 @@ async fn static_assets(req: Request<Body>) -> (StatusCode, HeaderMap, Body) {
     let mut file = match fs::read(&path) {
         Ok(file) => file,
         Err(err) => {
+            if *index && reading_index {
+                let script = format_script(addr, is_reload, false);
+                let html = format!(
+                    include_str!("templates/index.html"),
+                    script,
+                    get_index_listing(uri_path)
+                );
+                let body = Body::from(html);
+                return (StatusCode::OK, headers, body);
+            }
             match path.to_str() {
                 Some(path) => log::warn!("Failed to read \"{}\": {}", path, err),
                 None => log::warn!("Failed to read file with invalid path: {}", err),

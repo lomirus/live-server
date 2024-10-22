@@ -9,6 +9,9 @@ struct Args {
     /// Set the root path of the static assets
     #[clap(default_value = ".")]
     root: String,
+    // Whether to show directory listings if there is no index.html
+    #[clap(long)]
+    index: bool,
     /// Set the listener host
     #[clap(short = 'H', long, default_value = "0.0.0.0")]
     host: String,
@@ -34,12 +37,13 @@ async fn main() {
         host,
         port,
         root,
+        index,
         open,
         hard,
     } = Args::parse();
 
     let addr = format!("{}:{}", host, port);
-    let mut listener = listen(addr, root).await.unwrap();
+    let mut listener = listen(addr, root, index).await.unwrap();
 
     if let Some(page) = open {
         let origin = listener.link().unwrap();

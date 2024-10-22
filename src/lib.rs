@@ -32,6 +32,7 @@ use watcher::create_watcher;
 
 static ADDR: OnceCell<String> = OnceCell::const_new();
 static ROOT: OnceCell<PathBuf> = OnceCell::const_new();
+static INDEX: OnceCell<bool> = OnceCell::const_new();
 static HARD: OnceCell<bool> = OnceCell::const_new();
 static TX: OnceCell<broadcast::Sender<()>> = OnceCell::const_new();
 
@@ -42,6 +43,7 @@ pub struct Listener {
     debouncer: Debouncer<RecommendedWatcher, FileIdMap>,
     rx: Receiver<Result<Vec<DebouncedEvent>, Vec<notify::Error>>>,
     hard: bool,
+    index: bool,
 }
 
 impl Listener {
@@ -57,6 +59,7 @@ impl Listener {
     pub async fn start(self) -> Result<(), Box<dyn Error>> {
         HARD.set(self.hard)?;
         ROOT.set(self.root_path.clone())?;
+        INDEX.set(self.index)?;
         let (tx, _) = broadcast::channel(16);
         TX.set(tx)?;
 
@@ -120,9 +123,10 @@ impl Listener {
 ///     listen("127.0.0.1:8080", "./").await?.start().await
 /// }
 /// ```
-pub async fn listen<A: Into<String>, R: Into<PathBuf>>(
+pub async fn listen<A: Into<String>, R: Into<PathBuf>, I: Into<bool>>(
     addr: A,
     root: R,
+    index: I,
 ) -> Result<Listener, String> {
     let tcp_listener = create_listener(addr.into()).await?;
     let router = create_server();
@@ -133,6 +137,7 @@ pub async fn listen<A: Into<String>, R: Into<PathBuf>>(
         router,
         debouncer,
         root_path,
+        index: index.into(),
         rx,
         hard: false,
     })
