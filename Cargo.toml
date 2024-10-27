@@ -17,7 +17,7 @@ clap = { version = "4.5.19", features = ["derive"] }
 local-ip-address = "0.6.2"
 log = "0.4.22"
 env_logger = "0.10.2"
-notify-debouncer-full = "0.3.1"
+notify-debouncer-full = "0.3.2"
 tokio = { version = "1.40.0", features = ["full"] }
 axum = { version = "0.7.6", features = ["ws"]}
 futures = "0.3.31"
