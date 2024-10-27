@@ -92,15 +92,18 @@ fn get_index_listing(uri_path: &str) -> String {
     let path = ROOT.get().unwrap().join(&uri_path[1..]);
     let entries = fs::read_dir(path).unwrap();
     let mut entry_names = entries
-    .into_iter()
-    .filter_map(|e| {
-        e.ok().and_then(|entry| {
-            let is_dir = entry.metadata().ok()?.is_dir();
-            let trailing = if is_dir { "/" } else { "" };
-            entry.file_name().to_str().map(|name| format!("{name}{trailing}"))
+        .into_iter()
+        .filter_map(|e| {
+            e.ok().and_then(|entry| {
+                let is_dir = entry.metadata().ok()?.is_dir();
+                let trailing = if is_dir { "/" } else { "" };
+                entry
+                    .file_name()
+                    .to_str()
+                    .map(|name| format!("{name}{trailing}"))
+            })
         })
-    })
-    .collect::<Vec<String>>();
+        .collect::<Vec<String>>();
     entry_names.sort();
     if !is_root {
         entry_names.insert(0, "..".to_string());
