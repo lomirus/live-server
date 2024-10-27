@@ -9,7 +9,7 @@ struct Args {
     /// Set the root path of the static assets
     #[clap(default_value = ".")]
     root: String,
-    // Whether to show directory listings if there is no index.html
+    /// Whether to show directory listings if there is no index.html
     #[clap(long)]
     index: bool,
     /// Set the listener host

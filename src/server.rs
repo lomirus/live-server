@@ -92,34 +92,24 @@ fn get_index_listing(uri_path: &str) -> String {
     let path = ROOT.get().unwrap().join(&uri_path[1..]);
     let entries = fs::read_dir(path).unwrap();
     let mut entry_names = entries
-        .into_iter()
-        .filter_map(|e| match e {
-            Ok(entry) => {
-                let trailing = if entry.metadata().unwrap().is_dir() {
-                    "/"
-                } else {
-                    ""
-                };
-                Some(format!(
-                    "{}{}",
-                    entry.file_name().to_str().unwrap(),
-                    trailing
-                ))
-            }
-            Err(_) => None,
+    .into_iter()
+    .filter_map(|e| {
+        e.ok().and_then(|entry| {
+            let is_dir = entry.metadata().ok()?.is_dir();
+            let trailing = if is_dir { "/" } else { "" };
+            entry.file_name().to_str().map(|name| format!("{name}{trailing}"))
         })
-        .collect::<Vec<String>>();
+    })
+    .collect::<Vec<String>>();
     entry_names.sort();
-    let mut out = entry_names
-        .into_iter()
-        .map(|en| format!("<li><a href=\"{}\">{}</a></li>", en, en))
-        .fold(String::new(), |existing, new| {
-            format!("{}\n{}", existing, new)
-        });
     if !is_root {
-        out = format!("<li><a href=\"..\">..</a></li>\n{}", out);
+        entry_names.insert(0, "..".to_string());
     }
-    return out;
+    entry_names
+        .into_iter()
+        .map(|en| format!("<li><a href=\"{en}\">{en}</a></li>"))
+        .collect::<Vec<String>>()
+        .join("\n")
 }
 
 async fn static_assets(req: Request<Body>) -> (StatusCode, HeaderMap, Body) {
