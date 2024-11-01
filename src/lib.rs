@@ -5,7 +5,7 @@
 //! use live_server::listen;
 //!
 //! async fn serve() -> Result<(), Box<dyn std::error::Error>> {
-//!     listen("127.0.0.1:8080", "./").await?.start().await
+//!     listen("127.0.0.1:8080", "./", false).await?.start().await
 //! }
 //! ```
 //!
@@ -53,7 +53,7 @@ impl Listener {
     /// use live_server::listen;
     ///
     /// async fn serve() -> Result<(), Box<dyn std::error::Error>> {
-    ///     listen("127.0.0.1:8080", "./").await?.start().await
+    ///     listen("127.0.0.1:8080", "./", false).await?.start().await
     /// }
     /// ```
     pub async fn start(self) -> Result<(), Box<dyn Error>> {
@@ -76,7 +76,7 @@ impl Listener {
     /// use live_server::listen;
     ///
     /// async fn serve_hard() -> Result<(), Box<dyn std::error::Error>> {
-    ///     listen("127.0.0.1:8080", "./").await?.hard_reload().start().await
+    ///     listen("127.0.0.1:8080", "./", false).await?.hard_reload().start().await
     /// }
     /// ```
     pub fn hard_reload(mut self) -> Self {
@@ -90,7 +90,7 @@ impl Listener {
     /// use live_server::listen;
     ///
     /// async fn serve() {
-    ///     let listener = listen("127.0.0.1:8080", "./").await.unwrap();
+    ///     let listener = listen("127.0.0.1:8080", "./", false).await.unwrap();
     ///     let link = listener.link().unwrap();
     ///     assert_eq!(link, "http://127.0.0.1:8080");
     /// }
@@ -120,7 +120,7 @@ impl Listener {
 /// use live_server::listen;
 ///
 /// async fn serve() -> Result<(), Box<dyn std::error::Error>> {
-///     listen("127.0.0.1:8080", "./").await?.start().await
+///     listen("127.0.0.1:8080", "./", false).await?.start().await
 /// }
 /// ```
 pub async fn listen<A: Into<String>, R: Into<PathBuf>, I: Into<bool>>(
