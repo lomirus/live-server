@@ -3,7 +3,9 @@ use reqwest::StatusCode;
 
 #[tokio::test]
 async fn request() {
-    let listener = listen("127.0.0.1:8000", "./tests/page", false).await.unwrap();
+    let listener = listen("127.0.0.1:8000", "./tests/page", false)
+        .await
+        .unwrap();
     tokio::spawn(async {
         listener.start().await.unwrap();
     });
