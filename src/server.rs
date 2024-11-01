@@ -149,23 +149,25 @@ async fn static_assets(req: Request<Body>) -> (StatusCode, HeaderMap, Body) {
     let mut file = match fs::read(&path) {
         Ok(file) => file,
         Err(err) => {
-            if *index && reading_index {
-                let script = format_script(addr, is_reload, false);
-                let html = format!(
-                    include_str!("templates/index.html"),
-                    uri_path,
-                    script,
-                    get_index_listing(uri_path)
-                );
-                let body = Body::from(html);
-                return (StatusCode::OK, headers, body);
-            }
             match path.to_str() {
                 Some(path) => log::warn!("Failed to read \"{}\": {}", path, err),
                 None => log::warn!("Failed to read file with invalid path: {}", err),
             }
             let status_code = match err.kind() {
-                ErrorKind::NotFound => StatusCode::NOT_FOUND,
+                ErrorKind::NotFound => {
+                    if *index && reading_index {
+                        let script = format_script(addr, is_reload, false);
+                        let html = format!(
+                            include_str!("templates/index.html"),
+                            uri_path,
+                            script,
+                            get_index_listing(uri_path)
+                        );
+                        let body = Body::from(html);
+                        return (StatusCode::OK, headers, body);
+                    }
+                    StatusCode::NOT_FOUND
+                }
                 _ => StatusCode::INTERNAL_SERVER_ERROR,
             };
             if mime == "text/html" {
