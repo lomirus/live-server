@@ -10,9 +10,9 @@ use axum::{
 };
 use futures::{sink::SinkExt, stream::StreamExt};
 use std::{fs, io::ErrorKind, sync::Arc};
-use tokio::net::TcpListener;
+use tokio::{net::TcpListener, sync::broadcast};
 
-use crate::{ADDR, ROOT, TX};
+use crate::{ADDR, ROOT};
 
 /// JS script containing a function that takes in the address and connects to the websocket.
 const WEBSOCKET_FUNCTION: &str = include_str!("../templates/websocket.js");
@@ -32,6 +32,14 @@ pub struct Options {
     pub index_listing: bool,
 }
 
+pub(crate) struct AppState {
+    /// Always hard reload the page instead of hot-reload
+    pub(crate) hard_reload: bool,
+    /// Show page list of the current URL if `index.html` does not exist
+    pub(crate) index_listing: bool,
+    pub(crate) tx: Arc<broadcast::Sender<()>>,
+}
+
 impl Default for Options {
     fn default() -> Self {
         Self {
@@ -41,7 +49,8 @@ impl Default for Options {
     }
 }
 
-pub(crate) fn create_server(options: Options) -> Router {
+pub(crate) fn create_server(state: AppState) -> Router {
+    let tx = state.tx.clone();
     Router::new()
         .route("/", get(static_assets))
         .route("/*path", get(static_assets))
@@ -51,15 +60,14 @@ pub(crate) fn create_server(options: Options) -> Router {
                 ws.on_failed_upgrade(|error| {
                     log::error!("Failed to upgrade websocket: {}", error);
                 })
-                .on_upgrade(on_websocket_upgrade)
+                .on_upgrade(|socket: WebSocket| on_websocket_upgrade(socket, tx))
             }),
         )
-        .with_state(Arc::new(options))
+        .with_state(Arc::new(state))
 }
 
-async fn on_websocket_upgrade(socket: WebSocket) {
+async fn on_websocket_upgrade(socket: WebSocket, tx: Arc<broadcast::Sender<()>>) {
     let (mut sender, mut receiver) = socket.split();
-    let tx = TX.get().unwrap();
     let mut rx = tx.subscribe();
     let mut send_task = tokio::spawn(async move {
         while rx.recv().await.is_ok() {
@@ -103,7 +111,7 @@ fn get_index_listing(uri_path: &str) -> String {
 }
 
 async fn static_assets(
-    state: State<Arc<Options>>,
+    state: State<Arc<AppState>>,
     req: Request<Body>,
 ) -> (StatusCode, HeaderMap, Body) {
     let addr = ADDR.get().unwrap();

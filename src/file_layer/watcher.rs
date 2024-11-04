@@ -1,4 +1,4 @@
-use std::{path::PathBuf, time::Duration};
+use std::{path::PathBuf, sync::Arc, time::Duration};
 
 use notify::{Error, RecommendedWatcher, RecursiveMode, Watcher};
 use notify_debouncer_full::{
@@ -7,15 +7,8 @@ use notify_debouncer_full::{
 use tokio::{
     fs,
     runtime::Handle,
-    sync::mpsc::{channel, Receiver},
+    sync::{broadcast, mpsc::{channel, Receiver}},
 };
-
-use crate::TX;
-
-async fn broadcast() {
-    let tx = TX.get().unwrap();
-    let _ = tx.send(());
-}
 
 pub(crate) async fn create_watcher(
     root: PathBuf,
@@ -67,6 +60,7 @@ pub async fn watch(
     root_path: PathBuf,
     mut debouncer: Debouncer<RecommendedWatcher, FileIdMap>,
     mut rx: Receiver<Result<Vec<DebouncedEvent>, Vec<Error>>>,
+    tx: Arc<broadcast::Sender<()>>
 ) {
     debouncer
         .watcher()
@@ -127,7 +121,9 @@ pub async fn watch(
             }
         }
         if files_changed {
-            broadcast().await;
+            if let Err(err) = tx.send(()) {
+                log::error!("{:?}", err);
+            }
         }
     }
 }

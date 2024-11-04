@@ -22,12 +22,12 @@ pub use http_layer::server::Options;
 use file_layer::watcher::{create_watcher, watch};
 use http_layer::{
     listener::create_listener,
-    server::{create_server, serve},
+    server::{create_server, serve, AppState},
 };
 use local_ip_address::local_ip;
 use notify::RecommendedWatcher;
 use notify_debouncer_full::{DebouncedEvent, Debouncer, FileIdMap};
-use std::{error::Error, net::IpAddr, path::PathBuf};
+use std::{error::Error, net::IpAddr, path::PathBuf, sync::Arc};
 use tokio::{
     net::TcpListener,
     sync::{broadcast, mpsc::Receiver, OnceCell},
@@ -35,7 +35,6 @@ use tokio::{
 
 static ADDR: OnceCell<String> = OnceCell::const_new();
 static ROOT: OnceCell<PathBuf> = OnceCell::const_new();
-static TX: OnceCell<broadcast::Sender<()>> = OnceCell::const_new();
 
 pub struct Listener {
     tcp_listener: TcpListener,
@@ -57,10 +56,16 @@ impl Listener {
     pub async fn start(self, options: Options) -> Result<(), Box<dyn Error>> {
         ROOT.set(self.root_path.clone())?;
         let (tx, _) = broadcast::channel(16);
-        TX.set(tx)?;
 
-        let watcher_future = tokio::spawn(watch(self.root_path, self.debouncer, self.rx));
-        let server_future = tokio::spawn(serve(self.tcp_listener, create_server(options)));
+        let arc_tx = Arc::new(tx);
+        let app_state = AppState {
+            hard_reload: options.hard_reload,
+            index_listing: options.index_listing,
+            tx: arc_tx.clone(),
+        };
+
+        let watcher_future = tokio::spawn(watch(self.root_path, self.debouncer, self.rx, arc_tx));
+        let server_future = tokio::spawn(serve(self.tcp_listener, create_server(app_state)));
 
         tokio::try_join!(watcher_future, server_future)?;
 
