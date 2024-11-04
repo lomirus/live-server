@@ -1,6 +1,6 @@
 use std::{path::PathBuf, sync::Arc, time::Duration};
 
-use notify::{Error, RecommendedWatcher, RecursiveMode, Watcher};
+use notify::{Error, RecommendedWatcher, RecursiveMode};
 use notify_debouncer_full::{
     new_debouncer, DebounceEventResult, DebouncedEvent, Debouncer, FileIdMap,
 };
@@ -66,12 +66,8 @@ pub async fn watch(
     tx: Arc<broadcast::Sender<()>>,
 ) {
     debouncer
-        .watcher()
         .watch(&root_path, RecursiveMode::Recursive)
         .unwrap();
-    debouncer
-        .cache()
-        .add_root(&root_path, RecursiveMode::Recursive);
 
     while let Some(result) = rx.recv().await {
         let mut files_changed = false;

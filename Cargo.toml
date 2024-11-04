@@ -12,12 +12,12 @@ keywords = ["live", "server", "web", "reload"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-notify = "6.1.1"
+notify = "7.0.0"
 clap = { version = "4.5.20", features = ["derive"] }
 local-ip-address = "0.6.2"
 log = "0.4.22"
 env_logger = "0.10.2"
-notify-debouncer-full = "0.3.2"
+notify-debouncer-full = "0.4.0"
 tokio = { version = "1.41.0", features = ["full"] }
 axum = { version = "0.7.6", features = ["ws"]}
 futures = "0.3.31"
