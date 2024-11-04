@@ -1,61 +1,47 @@
-use std::io::ErrorKind;
-use std::{fs, net::IpAddr};
-
-use axum::extract::ws::WebSocket;
 use axum::{
     body::Body,
-    extract::{ws::Message, Request, WebSocketUpgrade},
+    extract::{
+        ws::{Message, WebSocket},
+        Request, State, WebSocketUpgrade,
+    },
     http::{header, HeaderMap, HeaderValue, StatusCode},
     routing::get,
     Router,
 };
 use futures::{sink::SinkExt, stream::StreamExt};
-use local_ip_address::local_ip;
+use std::{fs, io::ErrorKind, sync::Arc};
 use tokio::net::TcpListener;
 
-use crate::{ADDR, HARD, INDEX, ROOT, TX};
+use crate::{ADDR, ROOT, TX};
+
+/// JS script containing a function that takes in the address and connects to the websocket.
+const WEBSOCKET_FUNCTION: &str = include_str!("../templates/websocket.js");
+
+/// JS script to inject to the HTML on reload so the client
+/// knows it's a successful reload.
+const RELOAD_PAYLOAD: &str = include_str!("../templates/reload.js");
 
 pub(crate) async fn serve(tcp_listener: TcpListener, router: Router) {
     axum::serve(tcp_listener, router).await.unwrap();
 }
 
-pub(crate) async fn create_listener(addr: String) -> Result<TcpListener, String> {
-    match tokio::net::TcpListener::bind(&addr).await {
-        Ok(listener) => {
-            let port = listener.local_addr().unwrap().port();
-            let host = listener.local_addr().unwrap().ip();
-            let host = match host.is_unspecified() {
-                true => match local_ip() {
-                    Ok(addr) => addr,
-                    Err(err) => {
-                        log::warn!("Failed to get local IP address: {}", err);
-                        host
-                    }
-                },
-                false => host,
-            };
+pub struct Options {
+    /// Always hard reload the page instead of hot-reload
+    pub hard_reload: bool,
+    /// Show page list of the current URL if `index.html` does not exist
+    pub index_listing: bool,
+}
 
-            let addr = match host {
-                IpAddr::V4(host) => format!("{host}:{port}"),
-                IpAddr::V6(host) => format!("[{host}]:{port}"),
-            };
-            log::info!("Listening on http://{addr}/");
-            ADDR.set(addr).unwrap();
-            Ok(listener)
-        }
-        Err(err) => {
-            let err_msg = if let std::io::ErrorKind::AddrInUse = err.kind() {
-                format!("Address {} is already in use", &addr)
-            } else {
-                format!("Failed to listen on {}: {}", addr, err)
-            };
-            log::error!("{err_msg}");
-            Err(err_msg)
+impl Default for Options {
+    fn default() -> Self {
+        Self {
+            hard_reload: false,
+            index_listing: true,
         }
     }
 }
 
-pub(crate) fn create_server() -> Router {
+pub(crate) fn create_server(options: Options) -> Router {
     Router::new()
         .route("/", get(static_assets))
         .route("/*path", get(static_assets))
@@ -68,6 +54,7 @@ pub(crate) fn create_server() -> Router {
                 .on_upgrade(on_websocket_upgrade)
             }),
         )
+        .with_state(Arc::new(options))
 }
 
 async fn on_websocket_upgrade(socket: WebSocket) {
@@ -115,10 +102,12 @@ fn get_index_listing(uri_path: &str) -> String {
         .join("\n")
 }
 
-async fn static_assets(req: Request<Body>) -> (StatusCode, HeaderMap, Body) {
+async fn static_assets(
+    state: State<Arc<Options>>,
+    req: Request<Body>,
+) -> (StatusCode, HeaderMap, Body) {
     let addr = ADDR.get().unwrap();
     let root = ROOT.get().unwrap();
-    let index = INDEX.get().unwrap();
 
     let is_reload = req.uri().query().is_some_and(|x| x == "reload");
 
@@ -155,10 +144,10 @@ async fn static_assets(req: Request<Body>) -> (StatusCode, HeaderMap, Body) {
             }
             let status_code = match err.kind() {
                 ErrorKind::NotFound => {
-                    if *index && reading_index {
-                        let script = format_script(addr, is_reload, false);
+                    if state.index_listing && reading_index {
+                        let script = format_script(addr, state.hard_reload, is_reload, false);
                         let html = format!(
-                            include_str!("templates/index.html"),
+                            include_str!("../templates/index.html"),
                             uri_path,
                             script,
                             get_index_listing(uri_path)
@@ -171,8 +160,8 @@ async fn static_assets(req: Request<Body>) -> (StatusCode, HeaderMap, Body) {
                 _ => StatusCode::INTERNAL_SERVER_ERROR,
             };
             if mime == "text/html" {
-                let script = format_script(addr, is_reload, true);
-                let html = format!(include_str!("templates/error.html"), script, err);
+                let script = format_script(addr, state.hard_reload, is_reload, true);
+                let html = format!(include_str!("../templates/error.html"), script, err);
                 let body = Body::from(html);
 
                 return (status_code, headers, body);
@@ -191,9 +180,9 @@ async fn static_assets(req: Request<Body>) -> (StatusCode, HeaderMap, Body) {
                 return (StatusCode::INTERNAL_SERVER_ERROR, headers, body);
             }
         };
-        let script = format_script(addr, is_reload, false);
+        let script = format_script(addr, state.hard_reload, is_reload, false);
         file = format!("{text}{script}").into_bytes();
-    } else if !HARD.get().copied().unwrap_or(false) {
+    } else if state.hard_reload {
         // allow client to cache assets for a smoother reload.
         // client handles preloading to refresh cache before reloading.
         headers.append(
@@ -205,15 +194,8 @@ async fn static_assets(req: Request<Body>) -> (StatusCode, HeaderMap, Body) {
     (StatusCode::OK, headers, Body::from(file))
 }
 
-/// JS script containing a function that takes in the address and connects to the websocket.
-const WEBSOCKET_FUNCTION: &str = include_str!("templates/websocket.js");
-
-/// JS script to inject to the HTML on reload so the client
-/// knows it's a successful reload.
-const RELOAD_PAYLOAD: &str = include_str!("templates/reload.js");
-
 /// Inject the address into the websocket script and wrap it in a script tag
-fn format_script(addr: &str, is_reload: bool, is_error: bool) -> String {
+fn format_script(addr: &str, hard_reload: bool, is_reload: bool, is_error: bool) -> String {
     match (is_reload, is_error) {
         // successful reload, inject the reload payload
         (true, false) => format!("<script>{}</script>", RELOAD_PAYLOAD),
@@ -221,11 +203,7 @@ fn format_script(addr: &str, is_reload: bool, is_error: bool) -> String {
         (true, true) => String::new(),
         // normal connection, inject the websocket client
         _ => {
-            let hard = if HARD.get().copied().unwrap_or(false) {
-                "true"
-            } else {
-                "false"
-            };
+            let hard = if hard_reload { "true" } else { "false" };
             format!(
                 r#"<script>{}("{}", {})</script>"#,
                 WEBSOCKET_FUNCTION, addr, hard

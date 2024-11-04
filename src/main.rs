@@ -1,6 +1,6 @@
 use clap::Parser;
 use env_logger::Env;
-use live_server::listen;
+use live_server::{listen, Options};
 
 /// Launch a local network server with live reload feature for static pages.
 #[derive(Parser)]
@@ -43,7 +43,7 @@ async fn main() {
     } = Args::parse();
 
     let addr = format!("{}:{}", host, port);
-    let mut listener = listen(addr, root, index).await.unwrap();
+    let listener = listen(addr, root).await.unwrap();
 
     if let Some(page) = open {
         let origin = listener.link().unwrap();
@@ -51,9 +51,11 @@ async fn main() {
         open::that(format!("{origin}/{path}")).unwrap();
     }
 
-    if hard {
-        listener = listener.hard_reload();
-    }
-
-    listener.start().await.unwrap();
+    listener
+        .start(Options {
+            hard_reload: hard,
+            index_listing: index,
+        })
+        .await
+        .unwrap();
 }

@@ -1,13 +1,11 @@
-use live_server::listen;
+use live_server::{listen, Options};
 use reqwest::StatusCode;
 
 #[tokio::test]
 async fn request() {
-    let listener = listen("127.0.0.1:8000", "./tests/page", false)
-        .await
-        .unwrap();
+    let listener = listen("127.0.0.1:8000", "./tests/page").await.unwrap();
     tokio::spawn(async {
-        listener.start().await.unwrap();
+        listener.start(Options::default()).await.unwrap();
     });
 
     // Test requesting index.html

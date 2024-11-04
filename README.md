@@ -27,12 +27,13 @@ $ cargo install live-server
 $ live-server --help
 Launch a local network server with live reload feature for static pages
 
-Usage: live-server.exe [OPTIONS] [ROOT]
+Usage: live-server [OPTIONS] [ROOT]
 
 Arguments:
   [ROOT]  Set the root path of the static assets [default: .]
 
 Options:
+      --index          Whether to show directory listings if there is no index.html
   -H, --host <HOST>    Set the listener host [default: 0.0.0.0]
   -p, --port <PORT>    Set the listener port [default: 0]
   -o, --open [<PAGE>]  Open the page in browser automatically
