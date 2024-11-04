@@ -30,10 +30,8 @@ use notify_debouncer_full::{DebouncedEvent, Debouncer, FileIdMap};
 use std::{error::Error, net::IpAddr, path::PathBuf, sync::Arc};
 use tokio::{
     net::TcpListener,
-    sync::{broadcast, mpsc::Receiver, OnceCell},
+    sync::{broadcast, mpsc::Receiver},
 };
-
-static ADDR: OnceCell<String> = OnceCell::const_new();
 
 pub struct Listener {
     tcp_listener: TcpListener,
@@ -61,6 +59,7 @@ impl Listener {
             index_listing: options.index_listing,
             tx: arc_tx.clone(),
             root: self.root_path.clone(),
+            addr: self.link().unwrap()[7..].to_string(),
         };
 
         let watcher_future = tokio::spawn(watch(self.root_path, self.debouncer, self.rx, arc_tx));

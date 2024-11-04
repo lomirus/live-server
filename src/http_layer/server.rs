@@ -17,8 +17,6 @@ use std::{
 };
 use tokio::{net::TcpListener, sync::broadcast};
 
-use crate::ADDR;
-
 /// JS script containing a function that takes in the address and connects to the websocket.
 const WEBSOCKET_FUNCTION: &str = include_str!("../templates/websocket.js");
 
@@ -44,6 +42,7 @@ pub(crate) struct AppState {
     pub(crate) index_listing: bool,
     pub(crate) tx: Arc<broadcast::Sender<()>>,
     pub(crate) root: PathBuf,
+    pub(crate) addr: String,
 }
 
 impl Default for Options {
@@ -120,8 +119,6 @@ async fn static_assets(
     state: State<Arc<AppState>>,
     req: Request<Body>,
 ) -> (StatusCode, HeaderMap, Body) {
-    let addr = ADDR.get().unwrap();
-
     let is_reload = req.uri().query().is_some_and(|x| x == "reload");
 
     // Get the path and mime of the static file.
@@ -157,7 +154,8 @@ async fn static_assets(
             let status_code = match err.kind() {
                 ErrorKind::NotFound => {
                     if state.index_listing && is_accessing_dir {
-                        let script = format_script(addr, state.hard_reload, is_reload, false);
+                        let script =
+                            format_script(&state.addr, state.hard_reload, is_reload, false);
                         let html = format!(
                             include_str!("../templates/index.html"),
                             uri_path,
@@ -172,7 +170,7 @@ async fn static_assets(
                 _ => StatusCode::INTERNAL_SERVER_ERROR,
             };
             if mime == "text/html" {
-                let script = format_script(addr, state.hard_reload, is_reload, true);
+                let script = format_script(&state.addr, state.hard_reload, is_reload, true);
                 let html = format!(include_str!("../templates/error.html"), script, err);
                 let body = Body::from(html);
 
@@ -192,7 +190,7 @@ async fn static_assets(
                 return (StatusCode::INTERNAL_SERVER_ERROR, headers, body);
             }
         };
-        let script = format_script(addr, state.hard_reload, is_reload, false);
+        let script = format_script(&state.addr, state.hard_reload, is_reload, false);
         file = format!("{text}{script}").into_bytes();
     } else if state.hard_reload {
         // allow client to cache assets for a smoother reload.

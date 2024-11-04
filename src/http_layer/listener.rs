@@ -3,8 +3,6 @@ use std::net::IpAddr;
 use local_ip_address::local_ip;
 use tokio::net::TcpListener;
 
-use crate::ADDR;
-
 pub(crate) async fn create_listener(addr: String) -> Result<TcpListener, String> {
     match tokio::net::TcpListener::bind(&addr).await {
         Ok(listener) => {
@@ -26,7 +24,6 @@ pub(crate) async fn create_listener(addr: String) -> Result<TcpListener, String>
                 IpAddr::V6(host) => format!("[{host}]:{port}"),
             };
             log::info!("Listening on http://{addr}/");
-            ADDR.set(addr).unwrap();
             Ok(listener)
         }
         Err(err) => {
