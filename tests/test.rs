@@ -3,13 +3,17 @@ use reqwest::StatusCode;
 
 #[tokio::test]
 async fn request() {
-    let listener = listen("127.0.0.1:8000", "./tests/page").await.unwrap();
+    const HOST: &str = "127.0.0.1:8000";
+
+    let listener = listen(HOST, "./tests/page").await.unwrap();
     tokio::spawn(async {
         listener.start(Options::default()).await.unwrap();
     });
 
     // Test requesting index.html
-    let response = reqwest::get("http://127.0.0.1:8000").await.unwrap();
+    let response = reqwest::get(format!("http://{HOST}"))
+        .await
+        .unwrap();
 
     assert_eq!(response.status(), StatusCode::OK);
 
@@ -21,14 +25,14 @@ async fn request() {
         r#"{}<script>{}("{}", false)</script>"#,
         include_str!("./page/index.html"),
         include_str!("../src/templates/websocket.js"),
-        "127.0.0.1:8000"
+        HOST
     )
     .replace("\r\n", "\n");
     assert_eq!(text, target_text);
     assert!(text.contains("<script>"));
 
     // Test requesting index.js
-    let response = reqwest::get("http://127.0.0.1:8000/index.js")
+    let response = reqwest::get(format!("http://{HOST}/index.js"))
         .await
         .unwrap();
 
@@ -42,7 +46,7 @@ async fn request() {
     assert_eq!(text, target_text);
 
     // Test requesting non-existent html file
-    let response = reqwest::get("http://127.0.0.1:8000/404.html")
+    let response = reqwest::get(format!("http://{HOST}/404.html"))
         .await
         .unwrap();
 
@@ -55,7 +59,7 @@ async fn request() {
     assert!(text.starts_with("<!DOCTYPE html>"));
 
     // Test requesting non-existent asset
-    let response = reqwest::get("http://127.0.0.1:8000/favicon.ico")
+    let response = reqwest::get(format!("http://{HOST}/favicon.ico"))
         .await
         .unwrap();
 
@@ -65,7 +69,7 @@ async fn request() {
     assert_eq!(content_type, "image/x-icon");
 
     // Test requesting with reload query
-    let response = reqwest::get("http://127.0.0.1:8000?reload").await.unwrap();
+    let response = reqwest::get(format!("http://{HOST}?reload")).await.unwrap();
 
     assert_eq!(response.status(), StatusCode::OK);
 
@@ -82,7 +86,7 @@ async fn request() {
     assert_eq!(text, target_text);
 
     // Test requesting non-existent html file with reload query does not inject script
-    let response = reqwest::get("http://127.0.0.1:8000/404.html?reload")
+    let response = reqwest::get(format!("http://{HOST}/404.html?reload"))
         .await
         .unwrap();
 
