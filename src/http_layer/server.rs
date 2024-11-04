@@ -114,8 +114,8 @@ async fn static_assets(
     // Get the path and mime of the static file.
     let uri_path = req.uri().path();
     let mut path = root.join(&uri_path[1..]);
-    let mut reading_index = false;
-    if path.is_dir() {
+    let is_accessing_dir = path.is_dir();
+    if is_accessing_dir {
         if !uri_path.ends_with('/') {
             // redirect so parent links work correctly
             let redirect = format!("{}/", uri_path);
@@ -124,7 +124,6 @@ async fn static_assets(
             return (StatusCode::TEMPORARY_REDIRECT, headers, Body::empty());
         }
         path.push("index.html");
-        reading_index = true;
     }
     let mime = mime_guess::from_path(&path).first_or_text_plain();
 
@@ -144,7 +143,7 @@ async fn static_assets(
             }
             let status_code = match err.kind() {
                 ErrorKind::NotFound => {
-                    if state.index_listing && reading_index {
+                    if state.index_listing && is_accessing_dir {
                         let script = format_script(addr, state.hard_reload, is_reload, false);
                         let html = format!(
                             include_str!("../templates/index.html"),
