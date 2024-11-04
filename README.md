@@ -59,9 +59,9 @@ You can also import it as a library in your project.
 ### Create live server
 
 ```rust
-use live_server::listen;
+use live_server::{listen, Options};
 
-listen("127.0.0.1:8080", "./").await?.start().await?;
+listen("127.0.0.1:8080", "./").await?.start(Options::default()).await;
 ```
 
 ### Enable logs (Optional)
