@@ -34,7 +34,6 @@ use tokio::{
 };
 
 static ADDR: OnceCell<String> = OnceCell::const_new();
-static ROOT: OnceCell<PathBuf> = OnceCell::const_new();
 
 pub struct Listener {
     tcp_listener: TcpListener,
@@ -54,7 +53,6 @@ impl Listener {
     /// }
     /// ```
     pub async fn start(self, options: Options) -> Result<(), Box<dyn Error>> {
-        ROOT.set(self.root_path.clone())?;
         let (tx, _) = broadcast::channel(16);
 
         let arc_tx = Arc::new(tx);
@@ -62,6 +60,7 @@ impl Listener {
             hard_reload: options.hard_reload,
             index_listing: options.index_listing,
             tx: arc_tx.clone(),
+            root: self.root_path.clone(),
         };
 
         let watcher_future = tokio::spawn(watch(self.root_path, self.debouncer, self.rx, arc_tx));

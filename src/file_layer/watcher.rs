@@ -7,7 +7,10 @@ use notify_debouncer_full::{
 use tokio::{
     fs,
     runtime::Handle,
-    sync::{broadcast, mpsc::{channel, Receiver}},
+    sync::{
+        broadcast,
+        mpsc::{channel, Receiver},
+    },
 };
 
 pub(crate) async fn create_watcher(
@@ -60,7 +63,7 @@ pub async fn watch(
     root_path: PathBuf,
     mut debouncer: Debouncer<RecommendedWatcher, FileIdMap>,
     mut rx: Receiver<Result<Vec<DebouncedEvent>, Vec<Error>>>,
-    tx: Arc<broadcast::Sender<()>>
+    tx: Arc<broadcast::Sender<()>>,
 ) {
     debouncer
         .watcher()

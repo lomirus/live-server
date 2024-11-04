@@ -9,10 +9,15 @@ use axum::{
     Router,
 };
 use futures::{sink::SinkExt, stream::StreamExt};
-use std::{fs, io::ErrorKind, sync::Arc};
+use std::{
+    fs,
+    io::ErrorKind,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 use tokio::{net::TcpListener, sync::broadcast};
 
-use crate::{ADDR, ROOT};
+use crate::ADDR;
 
 /// JS script containing a function that takes in the address and connects to the websocket.
 const WEBSOCKET_FUNCTION: &str = include_str!("../templates/websocket.js");
@@ -38,6 +43,7 @@ pub(crate) struct AppState {
     /// Show page list of the current URL if `index.html` does not exist
     pub(crate) index_listing: bool,
     pub(crate) tx: Arc<broadcast::Sender<()>>,
+    pub(crate) root: PathBuf,
 }
 
 impl Default for Options {
@@ -82,9 +88,9 @@ async fn on_websocket_upgrade(socket: WebSocket, tx: Arc<broadcast::Sender<()>>)
     };
 }
 
-fn get_index_listing(uri_path: &str) -> String {
+fn get_index_listing(uri_path: &str, root: &Path) -> String {
     let is_root = uri_path == "/";
-    let path = ROOT.get().unwrap().join(&uri_path[1..]);
+    let path = root.join(&uri_path[1..]);
     let entries = fs::read_dir(path).unwrap();
     let mut entry_names = entries
         .into_iter()
@@ -115,13 +121,12 @@ async fn static_assets(
     req: Request<Body>,
 ) -> (StatusCode, HeaderMap, Body) {
     let addr = ADDR.get().unwrap();
-    let root = ROOT.get().unwrap();
 
     let is_reload = req.uri().query().is_some_and(|x| x == "reload");
 
     // Get the path and mime of the static file.
     let uri_path = req.uri().path();
-    let mut path = root.join(&uri_path[1..]);
+    let mut path = state.root.join(&uri_path[1..]);
     let is_accessing_dir = path.is_dir();
     if is_accessing_dir {
         if !uri_path.ends_with('/') {
@@ -157,7 +162,7 @@ async fn static_assets(
                             include_str!("../templates/index.html"),
                             uri_path,
                             script,
-                            get_index_listing(uri_path)
+                            get_index_listing(uri_path, &state.root)
                         );
                         let body = Body::from(html);
                         return (StatusCode::OK, headers, body);

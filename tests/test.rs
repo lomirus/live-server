@@ -11,9 +11,7 @@ async fn request() {
     });
 
     // Test requesting index.html
-    let response = reqwest::get(format!("http://{HOST}"))
-        .await
-        .unwrap();
+    let response = reqwest::get(format!("http://{HOST}")).await.unwrap();
 
     assert_eq!(response.status(), StatusCode::OK);
 
