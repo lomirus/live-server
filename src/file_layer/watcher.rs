@@ -2,7 +2,7 @@ use std::{path::PathBuf, sync::Arc, time::Duration};
 
 use notify::{Error, RecommendedWatcher, RecursiveMode};
 use notify_debouncer_full::{
-    new_debouncer, DebounceEventResult, DebouncedEvent, Debouncer, FileIdMap,
+    new_debouncer, DebounceEventResult, DebouncedEvent, Debouncer, RecommendedCache,
 };
 use tokio::{
     fs,
@@ -17,7 +17,7 @@ pub(crate) async fn create_watcher(
     root: PathBuf,
 ) -> Result<
     (
-        Debouncer<RecommendedWatcher, FileIdMap>,
+        Debouncer<RecommendedWatcher, RecommendedCache>,
         PathBuf,
         Receiver<Result<Vec<DebouncedEvent>, Vec<Error>>>,
     ),
@@ -61,7 +61,7 @@ pub(crate) async fn create_watcher(
 
 pub async fn watch(
     root_path: PathBuf,
-    mut debouncer: Debouncer<RecommendedWatcher, FileIdMap>,
+    mut debouncer: Debouncer<RecommendedWatcher, RecommendedCache>,
     mut rx: Receiver<Result<Vec<DebouncedEvent>, Vec<Error>>>,
     tx: Arc<broadcast::Sender<()>>,
 ) {

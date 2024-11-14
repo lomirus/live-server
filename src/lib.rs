@@ -26,7 +26,7 @@ use http_layer::{
 };
 use local_ip_address::local_ip;
 use notify::RecommendedWatcher;
-use notify_debouncer_full::{DebouncedEvent, Debouncer, FileIdMap};
+use notify_debouncer_full::{DebouncedEvent, Debouncer, RecommendedCache};
 use std::{error::Error, net::IpAddr, path::PathBuf, sync::Arc};
 use tokio::{
     net::TcpListener,
@@ -36,7 +36,7 @@ use tokio::{
 pub struct Listener {
     tcp_listener: TcpListener,
     root_path: PathBuf,
-    debouncer: Debouncer<RecommendedWatcher, FileIdMap>,
+    debouncer: Debouncer<RecommendedWatcher, RecommendedCache>,
     rx: Receiver<Result<Vec<DebouncedEvent>, Vec<notify::Error>>>,
 }
 
