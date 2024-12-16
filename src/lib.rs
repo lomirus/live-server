@@ -27,7 +27,12 @@ use http_layer::{
 use local_ip_address::local_ip;
 use notify::RecommendedWatcher;
 use notify_debouncer_full::{DebouncedEvent, Debouncer, RecommendedCache};
-use std::{error::Error, net::IpAddr, path::PathBuf, sync::Arc};
+use std::{
+    error::Error,
+    net::IpAddr,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 use tokio::{
     net::TcpListener,
     sync::{broadcast, mpsc::Receiver},
@@ -109,12 +114,9 @@ impl Listener {
 ///     listen("127.0.0.1:8080", "./").await?.start(Options::default()).await
 /// }
 /// ```
-pub async fn listen<A: Into<String>, R: Into<PathBuf>>(
-    addr: A,
-    root: R,
-) -> Result<Listener, String> {
-    let tcp_listener = create_listener(addr.into()).await?;
-    let (debouncer, root_path, rx) = create_watcher(root.into()).await?;
+pub async fn listen(addr: impl AsRef<str>, root: impl AsRef<Path>) -> Result<Listener, String> {
+    let tcp_listener = create_listener(addr.as_ref()).await?;
+    let (debouncer, root_path, rx) = create_watcher(root.as_ref()).await?;
 
     Ok(Listener {
         tcp_listener,

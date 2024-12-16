@@ -3,7 +3,7 @@ use std::net::IpAddr;
 use local_ip_address::local_ip;
 use tokio::net::TcpListener;
 
-pub(crate) async fn create_listener(addr: String) -> Result<TcpListener, String> {
+pub(crate) async fn create_listener(addr: &str) -> Result<TcpListener, String> {
     match tokio::net::TcpListener::bind(&addr).await {
         Ok(listener) => {
             let port = listener.local_addr().unwrap().port();
