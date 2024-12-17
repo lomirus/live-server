@@ -1,4 +1,8 @@
-use std::{path::PathBuf, sync::Arc, time::Duration};
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+    time::Duration,
+};
 
 use notify::{Error, RecommendedWatcher, RecursiveMode};
 use notify_debouncer_full::{
@@ -14,7 +18,7 @@ use tokio::{
 };
 
 pub(crate) async fn create_watcher(
-    root: PathBuf,
+    root: &Path,
 ) -> Result<
     (
         Debouncer<RecommendedWatcher, RecommendedCache>,
@@ -91,8 +95,8 @@ pub async fn watch(
                                         let target_name = &e.event.paths[1];
                                         log::debug!(
                                             "[RENAME] {} -> {}",
-                                            strip_prefix(source_name, &root_path),
-                                            strip_prefix(target_name, &root_path)
+                                            strip_prefix(source_name, &root_path).display(),
+                                            strip_prefix(target_name, &root_path).display(),
                                         );
                                         files_changed = true;
                                     }
@@ -127,10 +131,6 @@ pub async fn watch(
     }
 }
 
-fn strip_prefix(path: &std::path::Path, prefix: &std::path::PathBuf) -> String {
-    path.strip_prefix(prefix)
-        .unwrap()
-        .to_str()
-        .unwrap()
-        .to_string()
+fn strip_prefix<'a>(path: &'a Path, prefix: &Path) -> &'a Path {
+    path.strip_prefix(prefix).unwrap()
 }
