@@ -1,5 +1,6 @@
-(async (addr, hard) => {
-  addr = `ws://${addr}/live-server-ws`;
+(async (hard) => {
+  const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const addr = `${wsProtocol}//${location.host}/live-server-ws`;
   const sleep = (x) => new Promise((r) => setTimeout(r, x));
   const preload = async (url, requireSuccess) => {
     const resp = await fetch(url, { cache: "reload" }); // reset cache

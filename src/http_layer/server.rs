@@ -42,7 +42,6 @@ pub(crate) struct AppState {
     pub(crate) index_listing: bool,
     pub(crate) tx: Arc<broadcast::Sender<()>>,
     pub(crate) root: PathBuf,
-    pub(crate) addr: String,
 }
 
 impl Default for Options {
@@ -154,8 +153,7 @@ async fn static_assets(
             let status_code = match err.kind() {
                 ErrorKind::NotFound => {
                     if state.index_listing && is_accessing_dir {
-                        let script =
-                            format_script(&state.addr, state.hard_reload, is_reload, false);
+                        let script = format_script(state.hard_reload, is_reload, false);
                         let html = format!(
                             include_str!("../templates/index.html"),
                             uri_path,
@@ -170,7 +168,7 @@ async fn static_assets(
                 _ => StatusCode::INTERNAL_SERVER_ERROR,
             };
             if mime == "text/html" {
-                let script = format_script(&state.addr, state.hard_reload, is_reload, true);
+                let script = format_script(state.hard_reload, is_reload, true);
                 let html = format!(include_str!("../templates/error.html"), script, err);
                 let body = Body::from(html);
 
@@ -190,7 +188,7 @@ async fn static_assets(
                 return (StatusCode::INTERNAL_SERVER_ERROR, headers, body);
             }
         };
-        let script = format_script(&state.addr, state.hard_reload, is_reload, false);
+        let script = format_script(state.hard_reload, is_reload, false);
         file = format!("{text}{script}").into_bytes();
     } else if state.hard_reload {
         // allow client to cache assets for a smoother reload.
@@ -205,7 +203,7 @@ async fn static_assets(
 }
 
 /// Inject the address into the websocket script and wrap it in a script tag
-fn format_script(addr: &str, hard_reload: bool, is_reload: bool, is_error: bool) -> String {
+fn format_script(hard_reload: bool, is_reload: bool, is_error: bool) -> String {
     match (is_reload, is_error) {
         // successful reload, inject the reload payload
         (true, false) => format!("<script>{}</script>", RELOAD_PAYLOAD),
@@ -214,10 +212,7 @@ fn format_script(addr: &str, hard_reload: bool, is_reload: bool, is_error: bool)
         // normal connection, inject the websocket client
         _ => {
             let hard = if hard_reload { "true" } else { "false" };
-            format!(
-                r#"<script>{}("{}", {})</script>"#,
-                WEBSOCKET_FUNCTION, addr, hard
-            )
+            format!(r#"<script>{WEBSOCKET_FUNCTION}({hard})</script>"#)
         }
     }
 }
