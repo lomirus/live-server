@@ -54,7 +54,7 @@
       // with the reload payload. If the reload payload
       // is absent, it probably means the server responded
       // with a 404 page
-      const meta = ifr.contentDocument.head.lastChild;
+      const meta = ifr.contentDocument.head.querySelector('meta[name="live-server"]')
       if (
         meta &&
         meta.tagName === "META" &&
