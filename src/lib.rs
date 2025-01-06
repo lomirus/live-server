@@ -64,7 +64,6 @@ impl Listener {
             index_listing: options.index_listing,
             tx: arc_tx.clone(),
             root: self.root_path.clone(),
-            addr: self.link().unwrap()[7..].to_string(),
         };
 
         let watcher_future = tokio::spawn(watch(self.root_path, self.debouncer, self.rx, arc_tx));

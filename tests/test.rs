@@ -20,10 +20,9 @@ async fn request() {
 
     let text = response.text().await.unwrap().replace("\r\n", "\n");
     let target_text = format!(
-        r#"{}<script>{}("{}", false)</script>"#,
+        r#"{}<script>{}(false)</script>"#,
         include_str!("./page/index.html"),
         include_str!("../src/templates/websocket.js"),
-        HOST
     )
     .replace("\r\n", "\n");
     assert_eq!(text, target_text);
