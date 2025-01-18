@@ -24,7 +24,7 @@ $ cargo install live-server
 ### Usage
 
 ```console
-$ live-server --help
+$ live-server -h
 Launch a local network server with live reload feature for static pages
 
 Usage: live-server [OPTIONS] [ROOT]
