@@ -23,6 +23,7 @@ axum = { version = "0.7.6", features = ["ws"]}
 futures = "0.3.31"
 mime_guess = "2.0.5"
 open = "5.3.2"
+ignore = "0.4.23"
 
 [dev-dependencies]
 reqwest = "0.12.4"

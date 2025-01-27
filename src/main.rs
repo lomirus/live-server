@@ -9,7 +9,7 @@ struct Args {
     /// Set the root path of the static assets
     #[clap(default_value = ".")]
     root: String,
-    /// Whether to show directory listings if there is no index.html
+    /// Show directory listings if there is no index.html
     #[clap(long)]
     index: bool,
     /// Set the listener host
@@ -23,9 +23,14 @@ struct Args {
     open: Option<Option<String>>,
     /// Hard reload the page on update instead of hot reload
     ///
-    /// Try using this if the reload is not working as expected
+    /// Try using this if the reload is not working as expected.
     #[clap(long)]
     hard: bool,
+    /// Ignore files that match the pattern of .gitignore of the root
+    ///
+    /// Ignored files will be invisible and unaccessible for user, and their changes will not trigger reload events.
+    #[clap(short = 'I', long)]
+    ignore: bool,
 }
 
 #[tokio::main]
@@ -40,6 +45,7 @@ async fn main() {
         index,
         open,
         hard,
+        ignore,
     } = Args::parse();
 
     let addr = format!("{}:{}", host, port);
@@ -55,6 +61,7 @@ async fn main() {
         .start(Options {
             hard_reload: hard,
             index_listing: index,
+            auto_ignore: ignore,
         })
         .await
         .unwrap();

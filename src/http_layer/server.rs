@@ -17,6 +17,8 @@ use std::{
 };
 use tokio::{net::TcpListener, sync::broadcast};
 
+use crate::utils::is_ignored;
+
 /// JS script containing a function that takes in the address and connects to the websocket.
 const WEBSOCKET_FUNCTION: &str = include_str!("../templates/websocket.js");
 
@@ -33,6 +35,8 @@ pub struct Options {
     pub hard_reload: bool,
     /// Show page list of the current URL if `index.html` does not exist
     pub index_listing: bool,
+    /// Ignore files that match the pattern of .gitignore
+    pub auto_ignore: bool,
 }
 
 pub(crate) struct AppState {
@@ -40,6 +44,8 @@ pub(crate) struct AppState {
     pub(crate) hard_reload: bool,
     /// Show page list of the current URL if `index.html` does not exist
     pub(crate) index_listing: bool,
+    /// Ignore files that match the pattern of .gitignore
+    pub(crate) auto_ignore: bool,
     pub(crate) tx: Arc<broadcast::Sender<()>>,
     pub(crate) root: PathBuf,
 }
@@ -49,6 +55,7 @@ impl Default for Options {
         Self {
             hard_reload: false,
             index_listing: true,
+            auto_ignore: false,
         }
     }
 }
@@ -86,21 +93,34 @@ async fn on_websocket_upgrade(socket: WebSocket, tx: Arc<broadcast::Sender<()>>)
     };
 }
 
-fn get_index_listing(uri_path: &str, root: &Path) -> String {
+fn get_index_listing(uri_path: &str, root: &Path, auto_ignore: bool) -> String {
     let is_root = uri_path == "/";
     let path = root.join(&uri_path[1..]);
     let entries = fs::read_dir(path).unwrap();
     let mut entry_names = entries
         .into_iter()
         .filter_map(|e| {
-            e.ok().and_then(|entry| {
+            if let Ok(entry) = e {
+                if auto_ignore {
+                    let is_dir = entry.file_type().is_ok_and(|t| t.is_dir());
+                    match is_ignored(root, &entry.path(), is_dir) {
+                        Ok(ignored) => {
+                            if ignored {
+                                return None;
+                            }
+                        }
+                        Err(_) => return None,
+                    }
+                }
                 let is_dir = entry.metadata().ok()?.is_dir();
                 let trailing = if is_dir { "/" } else { "" };
                 entry
                     .file_name()
                     .to_str()
                     .map(|name| format!("{name}{trailing}"))
-            })
+            } else {
+                None
+            }
         })
         .collect::<Vec<String>>();
     entry_names.sort();
@@ -123,6 +143,26 @@ async fn static_assets(
     // Get the path and mime of the static file.
     let uri_path = req.uri().path();
     let mut path = state.root.join(&uri_path[1..]);
+    if state.auto_ignore {
+        match is_ignored(&state.root, &path, path.is_dir()) {
+            Ok(ignored) => {
+                if ignored {
+                    return (
+                        StatusCode::FORBIDDEN,
+                        HeaderMap::new(),
+                        Body::from("Unable to access ignored file"),
+                    );
+                }
+            }
+            Err(err) => {
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    HeaderMap::new(),
+                    Body::from(err.to_string()),
+                )
+            }
+        }
+    }
     let is_accessing_dir = path.is_dir();
     if is_accessing_dir {
         if !uri_path.ends_with('/') {
@@ -158,7 +198,7 @@ async fn static_assets(
                             include_str!("../templates/index.html"),
                             uri_path,
                             script,
-                            get_index_listing(uri_path, &state.root)
+                            get_index_listing(uri_path, &state.root, state.auto_ignore)
                         );
                         let body = Body::from(html);
                         return (StatusCode::OK, headers, body);

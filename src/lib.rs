@@ -16,6 +16,7 @@
 
 mod file_layer;
 mod http_layer;
+mod utils;
 
 pub use http_layer::server::Options;
 
@@ -62,11 +63,18 @@ impl Listener {
         let app_state = AppState {
             hard_reload: options.hard_reload,
             index_listing: options.index_listing,
+            auto_ignore: options.auto_ignore,
             tx: arc_tx.clone(),
             root: self.root_path.clone(),
         };
 
-        let watcher_future = tokio::spawn(watch(self.root_path, self.debouncer, self.rx, arc_tx));
+        let watcher_future = tokio::spawn(watch(
+            self.root_path,
+            self.debouncer,
+            self.rx,
+            arc_tx,
+            options.auto_ignore,
+        ));
         let server_future = tokio::spawn(serve(self.tcp_listener, create_server(app_state)));
 
         tokio::try_join!(watcher_future, server_future)?;

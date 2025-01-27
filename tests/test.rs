@@ -106,6 +106,7 @@ async fn disable_index_listing() {
             .start(Options {
                 hard_reload: true,
                 index_listing: false,
+                auto_ignore: false,
             })
             .await
             .unwrap();
@@ -133,6 +134,7 @@ async fn enable_index_listing() {
             .start(Options {
                 hard_reload: true,
                 index_listing: true,
+                auto_ignore: false,
             })
             .await
             .unwrap();
