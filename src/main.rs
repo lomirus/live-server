@@ -26,9 +26,12 @@ struct Args {
     /// Try using this if the reload is not working as expected.
     #[clap(long)]
     hard: bool,
-    /// Ignore files that match the pattern of .gitignore of the root
+    /// Ignore hidden and ignored files
     ///
-    /// Ignored files will be invisible and unaccessible for user, and their changes will not trigger reload events.
+    /// Ignored files will be invisible and unaccessible for user, and their
+    /// changes will not trigger reload events. The "ignored" files only follow
+    /// the `.gitignore` in the root directory, which means `.gitignore`s in the
+    /// sub-directories won't work.
     #[clap(short = 'I', long)]
     ignore: bool,
 }

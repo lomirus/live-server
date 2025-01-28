@@ -35,7 +35,7 @@ pub struct Options {
     pub hard_reload: bool,
     /// Show page list of the current URL if `index.html` does not exist
     pub index_listing: bool,
-    /// Ignore files that match the pattern of .gitignore
+    /// Ignore hidden and ignored files
     pub auto_ignore: bool,
 }
 
@@ -44,7 +44,7 @@ pub(crate) struct AppState {
     pub(crate) hard_reload: bool,
     /// Show page list of the current URL if `index.html` does not exist
     pub(crate) index_listing: bool,
-    /// Ignore files that match the pattern of .gitignore
+    /// Ignore hidden and ignored files
     pub(crate) auto_ignore: bool,
     pub(crate) tx: Arc<broadcast::Sender<()>>,
     pub(crate) root: PathBuf,
