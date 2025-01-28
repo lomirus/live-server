@@ -146,27 +146,6 @@ async fn static_assets(
     // Get the path and mime of the static file.
     let uri_path = req.uri().path();
     let mut path = state.root.join(&uri_path[1..]);
-    if state.auto_ignore {
-        match is_ignored(&state.root, &path) {
-            Ok(ignored) => {
-                if ignored {
-                    return (
-                        StatusCode::FORBIDDEN,
-                        HeaderMap::new(),
-                        Body::from("Unable to access ignored or hidden file, because `--ignore` is enabled"),
-                    );
-                }
-            }
-            Err(err) => {
-                log::error!("Failed to check ignore files: {err}");
-                return (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    HeaderMap::new(),
-                    Body::from(err.to_string()),
-                );
-            }
-        }
-    }
     let is_accessing_dir = path.is_dir();
     if is_accessing_dir {
         if !uri_path.ends_with('/') {
@@ -185,6 +164,27 @@ async fn static_assets(
         header::CONTENT_TYPE,
         HeaderValue::from_str(mime.as_ref()).unwrap(),
     );
+
+    if state.auto_ignore {
+        match is_ignored(&state.root, &path) {
+            Ok(ignored) => {
+                if ignored {
+                    let err_msg =
+                        "Unable to access ignored or hidden file, because `--ignore` is enabled";
+                    let body = generate_error_body(err_msg, state.hard_reload, is_reload);
+
+                    return (StatusCode::FORBIDDEN, HeaderMap::new(), body);
+                }
+            }
+            Err(err) => {
+                let err_msg = format!("Failed to check ignore files: {err}");
+                let body = generate_error_body(&err_msg, state.hard_reload, is_reload);
+                log::error!("{err_msg}");
+
+                return (StatusCode::INTERNAL_SERVER_ERROR, HeaderMap::new(), body);
+            }
+        }
+    }
 
     // Read the file.
     let mut file = match fs::read(&path) {
@@ -212,9 +212,7 @@ async fn static_assets(
                 _ => StatusCode::INTERNAL_SERVER_ERROR,
             };
             if mime == "text/html" {
-                let script = format_script(state.hard_reload, is_reload, true);
-                let html = format!(include_str!("../templates/error.html"), script, err);
-                let body = Body::from(html);
+                let body = generate_error_body(&err.to_string(), state.hard_reload, is_reload);
 
                 return (status_code, headers, body);
             }
@@ -259,4 +257,10 @@ fn format_script(hard_reload: bool, is_reload: bool, is_error: bool) -> String {
             format!(r#"<script>{WEBSOCKET_FUNCTION}({hard})</script>"#)
         }
     }
+}
+
+fn generate_error_body(err_msg: &str, hard_reload: bool, is_reload: bool) -> Body {
+    let script = format_script(hard_reload, is_reload, true);
+    let html = format!(include_str!("../templates/error.html"), script, err_msg);
+    Body::from(html)
 }
