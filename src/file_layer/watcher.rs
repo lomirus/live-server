@@ -17,7 +17,7 @@ use tokio::{
     },
 };
 
-use crate::utils::is_ignored;
+use crate::utils::{is_ignored, strip_prefix};
 
 pub(crate) async fn create_watcher(
     root: &Path,
@@ -85,7 +85,7 @@ pub async fn watch(
                         match e
                             .paths
                             .iter()
-                            .map(|p| is_ignored(&root_path, p, p.is_dir()))
+                            .map(|p| is_ignored(&root_path, p))
                             .collect::<Result<Vec<_>, _>>()
                         {
                             Ok(ignored_list) => {
@@ -152,8 +152,4 @@ pub async fn watch(
             }
         }
     }
-}
-
-fn strip_prefix<'a>(path: &'a Path, prefix: &Path) -> &'a Path {
-    path.strip_prefix(prefix).unwrap()
 }

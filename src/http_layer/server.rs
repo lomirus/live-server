@@ -102,14 +102,17 @@ fn get_index_listing(uri_path: &str, root: &Path, auto_ignore: bool) -> String {
         .filter_map(|e| {
             if let Ok(entry) = e {
                 if auto_ignore {
-                    let is_dir = entry.file_type().is_ok_and(|t| t.is_dir());
-                    match is_ignored(root, &entry.path(), is_dir) {
+                    match is_ignored(root, &entry.path()) {
                         Ok(ignored) => {
                             if ignored {
                                 return None;
                             }
                         }
-                        Err(_) => return None,
+                        Err(err) => {
+                            log::error!("Failed to check ignore files: {err}");
+                            // Do nothing if we cannot know if it's an ignored entry
+                            return None;
+                        }
                     }
                 }
                 let is_dir = entry.metadata().ok()?.is_dir();
@@ -144,22 +147,23 @@ async fn static_assets(
     let uri_path = req.uri().path();
     let mut path = state.root.join(&uri_path[1..]);
     if state.auto_ignore {
-        match is_ignored(&state.root, &path, path.is_dir()) {
+        match is_ignored(&state.root, &path) {
             Ok(ignored) => {
                 if ignored {
                     return (
                         StatusCode::FORBIDDEN,
                         HeaderMap::new(),
-                        Body::from("Unable to access ignored file"),
+                        Body::from("Unable to access ignored or hidden file, because `--ignore` is enabled"),
                     );
                 }
             }
             Err(err) => {
+                log::error!("Failed to check ignore files: {err}");
                 return (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     HeaderMap::new(),
                     Body::from(err.to_string()),
-                )
+                );
             }
         }
     }
