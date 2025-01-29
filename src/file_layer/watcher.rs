@@ -17,6 +17,8 @@ use tokio::{
     },
 };
 
+use crate::utils::{is_ignored, strip_prefix};
+
 pub(crate) async fn create_watcher(
     root: &Path,
 ) -> Result<
@@ -31,7 +33,7 @@ pub(crate) async fn create_watcher(
         Ok(path) => path,
         Err(err) => {
             let err_msg = format!("Failed to get absolute path of {:?}: {}", root, err);
-            log::error!("{}", err_msg);
+            log::error!("{err_msg}");
             return Err(err_msg);
         }
     };
@@ -41,7 +43,7 @@ pub(crate) async fn create_watcher(
         }
         Err(_) => {
             let err_msg = format!("Failed to parse path to string for `{:?}`", abs_root);
-            log::error!("{}", err_msg);
+            log::error!("{err_msg}");
             return Err(err_msg);
         }
     };
@@ -68,6 +70,7 @@ pub async fn watch(
     mut debouncer: Debouncer<RecommendedWatcher, RecommendedCache>,
     mut rx: Receiver<Result<Vec<DebouncedEvent>, Vec<Error>>>,
     tx: Arc<broadcast::Sender<()>>,
+    ignore_files: bool,
 ) {
     debouncer
         .watch(&root_path, RecursiveMode::Recursive)
@@ -78,6 +81,26 @@ pub async fn watch(
         match result {
             Ok(events) => {
                 for e in events {
+                    if ignore_files {
+                        match e
+                            .paths
+                            .iter()
+                            .map(|p| is_ignored(&root_path, p))
+                            .collect::<Result<Vec<_>, _>>()
+                        {
+                            Ok(ignored_list) => {
+                                if ignored_list.iter().all(|ignored| *ignored) {
+                                    log::debug!("Skipped ignored files: {:?}", e.paths);
+                                    continue;
+                                }
+                            }
+                            Err(err) => {
+                                log::error!("Failed to check ignore files: {err}");
+                                // Do nothing if we cannot know if it's an ignored entry
+                                continue;
+                            }
+                        }
+                    }
                     use notify::EventKind::*;
                     match e.event.kind {
                         Create(_) => {
@@ -129,8 +152,4 @@ pub async fn watch(
             }
         }
     }
-}
-
-fn strip_prefix<'a>(path: &'a Path, prefix: &Path) -> &'a Path {
-    path.strip_prefix(prefix).unwrap()
 }

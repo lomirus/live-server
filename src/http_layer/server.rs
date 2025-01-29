@@ -17,6 +17,8 @@ use std::{
 };
 use tokio::{net::TcpListener, sync::broadcast};
 
+use crate::utils::is_ignored;
+
 /// JS script containing a function that takes in the address and connects to the websocket.
 const WEBSOCKET_FUNCTION: &str = include_str!("../templates/websocket.js");
 
@@ -33,6 +35,8 @@ pub struct Options {
     pub hard_reload: bool,
     /// Show page list of the current URL if `index.html` does not exist
     pub index_listing: bool,
+    /// Ignore hidden and ignored files
+    pub auto_ignore: bool,
 }
 
 pub(crate) struct AppState {
@@ -40,6 +44,8 @@ pub(crate) struct AppState {
     pub(crate) hard_reload: bool,
     /// Show page list of the current URL if `index.html` does not exist
     pub(crate) index_listing: bool,
+    /// Ignore hidden and ignored files
+    pub(crate) auto_ignore: bool,
     pub(crate) tx: Arc<broadcast::Sender<()>>,
     pub(crate) root: PathBuf,
 }
@@ -49,6 +55,7 @@ impl Default for Options {
         Self {
             hard_reload: false,
             index_listing: true,
+            auto_ignore: false,
         }
     }
 }
@@ -86,21 +93,37 @@ async fn on_websocket_upgrade(socket: WebSocket, tx: Arc<broadcast::Sender<()>>)
     };
 }
 
-fn get_index_listing(uri_path: &str, root: &Path) -> String {
+fn get_index_listing(uri_path: &str, root: &Path, auto_ignore: bool) -> String {
     let is_root = uri_path == "/";
     let path = root.join(&uri_path[1..]);
     let entries = fs::read_dir(path).unwrap();
     let mut entry_names = entries
         .into_iter()
         .filter_map(|e| {
-            e.ok().and_then(|entry| {
+            if let Ok(entry) = e {
+                if auto_ignore {
+                    match is_ignored(root, &entry.path()) {
+                        Ok(ignored) => {
+                            if ignored {
+                                return None;
+                            }
+                        }
+                        Err(err) => {
+                            log::error!("Failed to check ignore files: {err}");
+                            // Do nothing if we cannot know if it's an ignored entry
+                            return None;
+                        }
+                    }
+                }
                 let is_dir = entry.metadata().ok()?.is_dir();
                 let trailing = if is_dir { "/" } else { "" };
                 entry
                     .file_name()
                     .to_str()
                     .map(|name| format!("{name}{trailing}"))
-            })
+            } else {
+                None
+            }
         })
         .collect::<Vec<String>>();
     entry_names.sort();
@@ -142,6 +165,27 @@ async fn static_assets(
         HeaderValue::from_str(mime.as_ref()).unwrap(),
     );
 
+    if state.auto_ignore {
+        match is_ignored(&state.root, &path) {
+            Ok(ignored) => {
+                if ignored {
+                    let err_msg =
+                        "Unable to access ignored or hidden file, because `--ignore` is enabled";
+                    let body = generate_error_body(err_msg, state.hard_reload, is_reload);
+
+                    return (StatusCode::FORBIDDEN, HeaderMap::new(), body);
+                }
+            }
+            Err(err) => {
+                let err_msg = format!("Failed to check ignore files: {err}");
+                let body = generate_error_body(&err_msg, state.hard_reload, is_reload);
+                log::error!("{err_msg}");
+
+                return (StatusCode::INTERNAL_SERVER_ERROR, HeaderMap::new(), body);
+            }
+        }
+    }
+
     // Read the file.
     let mut file = match fs::read(&path) {
         Ok(file) => file,
@@ -158,7 +202,7 @@ async fn static_assets(
                             include_str!("../templates/index.html"),
                             uri_path,
                             script,
-                            get_index_listing(uri_path, &state.root)
+                            get_index_listing(uri_path, &state.root, state.auto_ignore)
                         );
                         let body = Body::from(html);
                         return (StatusCode::OK, headers, body);
@@ -168,9 +212,7 @@ async fn static_assets(
                 _ => StatusCode::INTERNAL_SERVER_ERROR,
             };
             if mime == "text/html" {
-                let script = format_script(state.hard_reload, is_reload, true);
-                let html = format!(include_str!("../templates/error.html"), script, err);
-                let body = Body::from(html);
+                let body = generate_error_body(&err.to_string(), state.hard_reload, is_reload);
 
                 return (status_code, headers, body);
             }
@@ -215,4 +257,10 @@ fn format_script(hard_reload: bool, is_reload: bool, is_error: bool) -> String {
             format!(r#"<script>{WEBSOCKET_FUNCTION}({hard})</script>"#)
         }
     }
+}
+
+fn generate_error_body(err_msg: &str, hard_reload: bool, is_reload: bool) -> Body {
+    let script = format_script(hard_reload, is_reload, true);
+    let html = format!(include_str!("../templates/error.html"), script, err_msg);
+    Body::from(html)
 }
