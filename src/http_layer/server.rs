@@ -17,7 +17,7 @@ use std::{
 };
 use tokio::{net::TcpListener, sync::broadcast};
 
-use crate::utils::is_ignored;
+use crate::{http_layer::template::{error_html, index_html}, utils::is_ignored};
 
 /// JS script containing a function that takes in the address and connects to the websocket.
 const WEBSOCKET_FUNCTION: &str = include_str!("../templates/websocket.js");
@@ -198,11 +198,10 @@ async fn static_assets(
                 ErrorKind::NotFound => {
                     if state.index_listing && is_accessing_dir {
                         let script = format_script(state.hard_reload, is_reload, false);
-                        let html = format!(
-                            include_str!("../templates/index.html"),
+                        let html = index_html(
                             uri_path,
-                            script,
-                            get_index_listing(uri_path, &state.root, state.auto_ignore)
+                            &script,
+                            &get_index_listing(uri_path, &state.root, state.auto_ignore),
                         );
                         let body = Body::from(html);
                         return (StatusCode::OK, headers, body);
@@ -211,12 +210,15 @@ async fn static_assets(
                 }
                 _ => StatusCode::INTERNAL_SERVER_ERROR,
             };
-            if mime == "text/html" {
-                let body = generate_error_body(&err.to_string(), state.hard_reload, is_reload);
-
-                return (status_code, headers, body);
-            }
-            return (status_code, headers, Body::empty());
+            return (
+                status_code,
+                headers,
+                if mime == "text/html" {
+                    generate_error_body(&err.to_string(), state.hard_reload, is_reload)
+                } else {
+                    Body::empty()
+                },
+            );
         }
     };
 
@@ -261,6 +263,6 @@ fn format_script(hard_reload: bool, is_reload: bool, is_error: bool) -> String {
 
 fn generate_error_body(err_msg: &str, hard_reload: bool, is_reload: bool) -> Body {
     let script = format_script(hard_reload, is_reload, true);
-    let html = format!(include_str!("../templates/error.html"), script, err_msg);
+    let html = error_html(&script, err_msg);
     Body::from(html)
 }
