@@ -145,6 +145,13 @@ async fn static_assets(
 
     // Get the path and mime of the static file.
     let uri_path = req.uri().path();
+    // Avoid [directory traversal attack](https://en.wikipedia.org/wiki/Directory_traversal_attack).
+    if uri_path.starts_with("//") {
+        let redirect = format!("/{}", uri_path.trim_start_matches("/"));
+        let mut headers = HeaderMap::new();
+        headers.append(header::LOCATION, HeaderValue::from_str(&redirect).unwrap());
+        return (StatusCode::TEMPORARY_REDIRECT, headers, Body::empty());
+    }
     let mut path = state.root.join(&uri_path[1..]);
     let is_accessing_dir = path.is_dir();
     if is_accessing_dir {
