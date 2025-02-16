@@ -16,7 +16,7 @@ async fn request() {
     assert_eq!(response.status(), StatusCode::OK);
 
     let content_type = response.headers().get("content-type").unwrap();
-    assert_eq!(content_type, "text/html");
+    assert_eq!(content_type, "text/html; charset=utf-8");
 
     let text = response.text().await.unwrap().replace("\r\n", "\n");
     let target_text = format!(
@@ -36,7 +36,7 @@ async fn request() {
     assert_eq!(response.status(), StatusCode::OK);
 
     let content_type = response.headers().get("content-type").unwrap();
-    assert_eq!(content_type, "text/javascript");
+    assert_eq!(content_type, "text/javascript; charset=utf-8");
 
     let text = response.text().await.unwrap().replace("\r\n", "\n");
     let target_text = include_str!("./page/index.js").replace("\r\n", "\n");
@@ -50,7 +50,7 @@ async fn request() {
     assert_eq!(response.status(), StatusCode::NOT_FOUND);
 
     let content_type = response.headers().get("content-type").unwrap();
-    assert_eq!(content_type, "text/html");
+    assert_eq!(content_type, "text/html; charset=utf-8");
 
     let text = response.text().await.unwrap();
     assert!(text.starts_with("<!DOCTYPE html>"));
@@ -71,7 +71,7 @@ async fn request() {
     assert_eq!(response.status(), StatusCode::OK);
 
     let content_type = response.headers().get("content-type").unwrap();
-    assert_eq!(content_type, "text/html");
+    assert_eq!(content_type, "text/html; charset=utf-8");
 
     let text = response.text().await.unwrap().replace("\r\n", "\n");
     let target_text = format!(
@@ -90,7 +90,7 @@ async fn request() {
     assert_eq!(response.status(), StatusCode::NOT_FOUND);
 
     let content_type = response.headers().get("content-type").unwrap();
-    assert_eq!(content_type, "text/html");
+    assert_eq!(content_type, "text/html; charset=utf-8");
 
     let text = response.text().await.unwrap();
     assert!(!text.contains("<script>"));
@@ -117,7 +117,7 @@ async fn disable_index_listing() {
     assert_eq!(response.status(), StatusCode::NOT_FOUND);
 
     let content_type = response.headers().get("content-type").unwrap();
-    assert_eq!(content_type, "text/html");
+    assert_eq!(content_type, "text/html; charset=utf-8");
 
     let text = response.text().await.unwrap().replace("\r\n", "\n");
     assert!(text.starts_with("<!DOCTYPE html>"));
@@ -145,7 +145,7 @@ async fn enable_index_listing() {
     assert_eq!(response.status(), StatusCode::OK);
 
     let content_type = response.headers().get("content-type").unwrap();
-    assert_eq!(content_type, "text/html");
+    assert_eq!(content_type, "text/html; charset=utf-8");
 
     let text = response.text().await.unwrap().replace("\r\n", "\n");
     assert!(text.ends_with(
