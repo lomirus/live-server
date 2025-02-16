@@ -200,10 +200,6 @@ async fn static_assets(
     let mut file = match fs::read(&path) {
         Ok(file) => file,
         Err(err) => {
-            match path.to_str() {
-                Some(path) => log::warn!("Failed to read \"{}\": {}", path, err),
-                None => log::warn!("Failed to read file with invalid path: {}", err),
-            }
             let status_code = match err.kind() {
                 ErrorKind::NotFound => {
                     if state.index_listing && is_accessing_dir {
@@ -219,6 +215,10 @@ async fn static_assets(
                 }
                 _ => StatusCode::INTERNAL_SERVER_ERROR,
             };
+            match path.to_str() {
+                Some(path) => log::warn!("Failed to read \"{}\": {}", path, err),
+                None => log::warn!("Failed to read file with invalid path: {}", err),
+            }
             return (
                 status_code,
                 headers,
