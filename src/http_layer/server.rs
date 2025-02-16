@@ -17,7 +17,10 @@ use std::{
 };
 use tokio::{net::TcpListener, sync::broadcast};
 
-use crate::{http_layer::template::{error_html, index_html}, utils::is_ignored};
+use crate::{
+    http_layer::template::{error_html, index_html},
+    utils::is_ignored,
+};
 
 /// JS script containing a function that takes in the address and connects to the websocket.
 const WEBSOCKET_FUNCTION: &str = include_str!("../templates/websocket.js");
@@ -145,6 +148,13 @@ async fn static_assets(
 
     // Get the path and mime of the static file.
     let uri_path = req.uri().path();
+    // Avoid [directory traversal attack](https://en.wikipedia.org/wiki/Directory_traversal_attack).
+    if uri_path.starts_with("//") {
+        let redirect = format!("/{}", uri_path.trim_start_matches("/"));
+        let mut headers = HeaderMap::new();
+        headers.append(header::LOCATION, HeaderValue::from_str(&redirect).unwrap());
+        return (StatusCode::TEMPORARY_REDIRECT, headers, Body::empty());
+    }
     let mut path = state.root.join(&uri_path[1..]);
     let is_accessing_dir = path.is_dir();
     if is_accessing_dir {
@@ -203,8 +213,7 @@ async fn static_assets(
                             &script,
                             &get_index_listing(uri_path, &state.root, state.auto_ignore),
                         );
-                        let body = Body::from(html);
-                        return (StatusCode::OK, headers, body);
+                        return (StatusCode::OK, headers, html);
                     }
                     StatusCode::NOT_FOUND
                 }
@@ -263,6 +272,5 @@ fn format_script(hard_reload: bool, is_reload: bool, is_error: bool) -> String {
 
 fn generate_error_body(err_msg: &str, hard_reload: bool, is_reload: bool) -> Body {
     let script = format_script(hard_reload, is_reload, true);
-    let html = error_html(&script, err_msg);
-    Body::from(html)
+    error_html(&script, err_msg)
 }
