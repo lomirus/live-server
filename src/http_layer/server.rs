@@ -213,8 +213,7 @@ async fn static_assets(
                             &script,
                             &get_index_listing(uri_path, &state.root, state.auto_ignore),
                         );
-                        let body = Body::from(html);
-                        return (StatusCode::OK, headers, body);
+                        return (StatusCode::OK, headers, html);
                     }
                     StatusCode::NOT_FOUND
                 }
@@ -273,6 +272,5 @@ fn format_script(hard_reload: bool, is_reload: bool, is_error: bool) -> String {
 
 fn generate_error_body(err_msg: &str, hard_reload: bool, is_reload: bool) -> Body {
     let script = format_script(hard_reload, is_reload, true);
-    let html = error_html(&script, err_msg);
-    Body::from(html)
+    error_html(&script, err_msg)
 }
