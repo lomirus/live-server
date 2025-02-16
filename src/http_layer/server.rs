@@ -17,7 +17,10 @@ use std::{
 };
 use tokio::{net::TcpListener, sync::broadcast};
 
-use crate::{http_layer::template::{error_html, index_html}, utils::is_ignored};
+use crate::{
+    http_layer::template::{error_html, index_html},
+    utils::is_ignored,
+};
 
 /// JS script containing a function that takes in the address and connects to the websocket.
 const WEBSOCKET_FUNCTION: &str = include_str!("../templates/websocket.js");
