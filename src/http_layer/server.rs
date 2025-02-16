@@ -9,6 +9,7 @@ use axum::{
     Router,
 };
 use futures::{sink::SinkExt, stream::StreamExt};
+use mime_guess::mime;
 use std::{
     fs,
     io::ErrorKind,
@@ -170,9 +171,14 @@ async fn static_assets(
     let mime = mime_guess::from_path(&path).first_or_text_plain();
 
     let mut headers = HeaderMap::new();
+    let content_type = if mime.type_() == mime::TEXT {
+        format!("{}; charset=utf-8", mime.as_ref())
+    } else {
+        mime.as_ref().to_string()
+    };
     headers.append(
         header::CONTENT_TYPE,
-        HeaderValue::from_str(mime.as_ref()).unwrap(),
+        HeaderValue::from_str(&content_type).unwrap(),
     );
 
     if state.auto_ignore {
@@ -225,7 +231,7 @@ async fn static_assets(
                 if mime == "text/html" {
                     generate_error_body(&err.to_string(), state.hard_reload, is_reload)
                 } else {
-                    Body::empty()
+                    Body::from(err.to_string())
                 },
             );
         }
@@ -236,9 +242,9 @@ async fn static_assets(
         let text = match String::from_utf8(file) {
             Ok(text) => text,
             Err(err) => {
-                log::error!("{}", err);
-                let body = Body::from(err.to_string());
-                return (StatusCode::INTERNAL_SERVER_ERROR, headers, body);
+                log::error!("Failed to read {:?} as utf-8: {}", path, err);
+                let html = generate_error_body(&err.to_string(), state.hard_reload, is_reload);
+                return (StatusCode::INTERNAL_SERVER_ERROR, headers, html);
             }
         };
         let script = format_script(state.hard_reload, is_reload, false);
