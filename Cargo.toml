@@ -13,7 +13,7 @@ keywords = ["live", "server", "web", "reload"]
 
 [dependencies]
 notify = "8.0.0"
-clap = { version = "4.5.28", features = ["derive"] }
+clap = { version = "4.5.29", features = ["derive"] }
 local-ip-address = "0.6.3"
 log = "0.4.25"
 env_logger = "0.10.2"
