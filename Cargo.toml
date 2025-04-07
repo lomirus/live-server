@@ -18,7 +18,7 @@ local-ip-address = "0.6.3"
 log = "0.4.27"
 env_logger = "0.10.2"
 notify-debouncer-full = "0.5.0"
-tokio = { version = "1.44.1", features = ["full"] }
+tokio = { version = "1.44.2", features = ["full"] }
 axum = { version = "0.7.6", features = ["ws"]}
 futures = "0.3.31"
 mime_guess = "2.0.5"
