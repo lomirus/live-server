@@ -35,6 +35,7 @@ use std::{
     sync::Arc,
 };
 use tokio::{
+    fs,
     net::TcpListener,
     sync::{broadcast, mpsc::Receiver},
 };
@@ -123,12 +124,40 @@ impl Listener {
 /// ```
 pub async fn listen(addr: impl AsRef<str>, root: impl AsRef<Path>) -> Result<Listener, String> {
     let tcp_listener = create_listener(addr.as_ref()).await?;
-    let (debouncer, root_path, rx) = create_watcher(root.as_ref()).await?;
+    let (debouncer, rx) = create_watcher().await?;
+
+    let abs_root = get_absolute_path(root.as_ref()).await?;
+    print_listening_on_path(&abs_root)?;
 
     Ok(Listener {
         tcp_listener,
         debouncer,
-        root_path,
+        root_path: abs_root,
         rx,
     })
+}
+
+async fn get_absolute_path(path: &Path) -> Result<PathBuf, String> {
+    match fs::canonicalize(path).await {
+        Ok(path) => Ok(path),
+        Err(err) => {
+            let err_msg = format!("Failed to get absolute path of {:?}: {}", path, err);
+            log::error!("{err_msg}");
+            Err(err_msg)
+        }
+    }
+}
+
+fn print_listening_on_path(path: &PathBuf) -> Result<(), String> {
+    match path.as_os_str().to_str() {
+        Some(path_str) => {
+            log::info!("Listening on {}", path_str);
+            Ok(())
+        }
+        None => {
+            let err_msg = format!("Failed to parse path to string for `{:?}`", path);
+            log::error!("{err_msg}");
+            Err(err_msg)
+        }
+    }
 }

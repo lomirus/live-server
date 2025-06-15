@@ -1,15 +1,10 @@
-use std::{
-    path::{Path, PathBuf},
-    sync::Arc,
-    time::Duration,
-};
+use std::{path::PathBuf, sync::Arc, time::Duration};
 
 use notify::{Error, RecommendedWatcher, RecursiveMode};
 use notify_debouncer_full::{
     new_debouncer, DebounceEventResult, DebouncedEvent, Debouncer, RecommendedCache,
 };
 use tokio::{
-    fs,
     runtime::Handle,
     sync::{
         broadcast,
@@ -19,34 +14,13 @@ use tokio::{
 
 use crate::utils::{is_ignored, strip_prefix};
 
-pub(crate) async fn create_watcher(
-    root: &Path,
-) -> Result<
+pub(crate) async fn create_watcher() -> Result<
     (
         Debouncer<RecommendedWatcher, RecommendedCache>,
-        PathBuf,
         Receiver<Result<Vec<DebouncedEvent>, Vec<Error>>>,
     ),
     String,
 > {
-    let abs_root = match fs::canonicalize(&root).await {
-        Ok(path) => path,
-        Err(err) => {
-            let err_msg = format!("Failed to get absolute path of {:?}: {}", root, err);
-            log::error!("{err_msg}");
-            return Err(err_msg);
-        }
-    };
-    match abs_root.clone().into_os_string().into_string() {
-        Ok(path_str) => {
-            log::info!("Listening on {}", path_str);
-        }
-        Err(_) => {
-            let err_msg = format!("Failed to parse path to string for `{:?}`", abs_root);
-            log::error!("{err_msg}");
-            return Err(err_msg);
-        }
-    };
     let rt = Handle::current();
     let (tx, rx) = channel::<Result<Vec<DebouncedEvent>, Vec<Error>>>(16);
     new_debouncer(
@@ -61,7 +35,7 @@ pub(crate) async fn create_watcher(
             });
         },
     )
-    .map(|d| (d, abs_root, rx))
+    .map(|d| (d, rx))
     .map_err(|e| e.to_string())
 }
 
