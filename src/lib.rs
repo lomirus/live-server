@@ -28,6 +28,7 @@ use http_layer::{
 use local_ip_address::local_ip;
 use notify::RecommendedWatcher;
 use notify_debouncer_full::{DebouncedEvent, Debouncer, RecommendedCache};
+use path_absolutize::Absolutize;
 use std::{
     error::Error,
     net::IpAddr,
@@ -35,7 +36,6 @@ use std::{
     sync::Arc,
 };
 use tokio::{
-    fs,
     net::TcpListener,
     sync::{broadcast, mpsc::Receiver},
 };
@@ -138,8 +138,8 @@ pub async fn listen(addr: impl AsRef<str>, root: impl AsRef<Path>) -> Result<Lis
 }
 
 async fn get_absolute_path(path: &Path) -> Result<PathBuf, String> {
-    match fs::canonicalize(path).await {
-        Ok(path) => Ok(path),
+    match path.absolutize() {
+        Ok(path) => Ok(path.to_path_buf()),
         Err(err) => {
             let err_msg = format!("Failed to get absolute path of {:?}: {}", path, err);
             log::error!("{err_msg}");
