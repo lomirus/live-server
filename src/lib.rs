@@ -126,7 +126,7 @@ pub async fn listen(addr: impl AsRef<str>, root: impl AsRef<Path>) -> Result<Lis
     let tcp_listener = create_listener(addr.as_ref()).await?;
     let (debouncer, rx) = create_watcher().await?;
 
-    let abs_root = get_absolute_path(root.as_ref()).await?;
+    let abs_root = get_absolute_path(root.as_ref())?;
     print_listening_on_path(&abs_root)?;
 
     Ok(Listener {
@@ -137,7 +137,7 @@ pub async fn listen(addr: impl AsRef<str>, root: impl AsRef<Path>) -> Result<Lis
     })
 }
 
-async fn get_absolute_path(path: &Path) -> Result<PathBuf, String> {
+fn get_absolute_path(path: &Path) -> Result<PathBuf, String> {
     match path.absolutize() {
         Ok(path) => Ok(path.to_path_buf()),
         Err(err) => {
