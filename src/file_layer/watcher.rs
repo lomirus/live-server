@@ -48,7 +48,7 @@ pub async fn watch(
 ) {
     let root_parent = root_path.parent();
     debouncer
-        .watch(&root_parent.unwrap_or(&root_path), RecursiveMode::Recursive)
+        .watch(root_parent.unwrap_or(&root_path), RecursiveMode::Recursive)
         .unwrap();
 
     while let Some(result) = rx.recv().await {
