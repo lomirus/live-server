@@ -10,16 +10,15 @@ on:
 
 jobs:
   check:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     env:
       RUSTFLAGS: -D warnings
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
           components: clippy, rustfmt
-          default: true
       - run: cargo fmt --check
       - run: cargo clippy
       - run: cargo test
