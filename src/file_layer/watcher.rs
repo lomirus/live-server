@@ -56,7 +56,7 @@ pub async fn watch(
         match result {
             Ok(events) => {
                 for e in events {
-                    if  e.paths.iter().all(|p| !p.starts_with(&root_path)) {
+                    if e.paths.iter().all(|p| !p.starts_with(&root_path)) {
                         // All paths in this event are NOT related to the root path
                         log::debug!("Skipped files that are not in root: {:?}", e.paths);
                         continue;
