@@ -23,7 +23,7 @@ pub use http_layer::server::Options;
 use file_layer::watcher::{create_watcher, watch};
 use http_layer::{
     listener::create_listener,
-    server::{create_server, serve, AppState},
+    server::{AppState, create_server, serve},
 };
 use local_ip_address::local_ip;
 use notify::RecommendedWatcher;

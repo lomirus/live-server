@@ -1,4 +1,4 @@
-use live_server::{listen, Options};
+use live_server::{Options, listen};
 use reqwest::StatusCode;
 
 #[tokio::test]

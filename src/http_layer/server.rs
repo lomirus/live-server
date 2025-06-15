@@ -1,12 +1,12 @@
 use axum::{
+    Router,
     body::Body,
     extract::{
-        ws::{Message, WebSocket},
         Request, State, WebSocketUpgrade,
+        ws::{Message, WebSocket},
     },
-    http::{header, HeaderMap, HeaderValue, StatusCode},
+    http::{HeaderMap, HeaderValue, StatusCode, header},
     routing::get,
-    Router,
 };
 use futures::{sink::SinkExt, stream::StreamExt};
 use mime_guess::mime;

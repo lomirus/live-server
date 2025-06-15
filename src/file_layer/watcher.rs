@@ -2,13 +2,13 @@ use std::{path::PathBuf, sync::Arc, time::Duration};
 
 use notify::{Error, RecommendedWatcher, RecursiveMode};
 use notify_debouncer_full::{
-    new_debouncer, DebounceEventResult, DebouncedEvent, Debouncer, RecommendedCache,
+    DebounceEventResult, DebouncedEvent, Debouncer, RecommendedCache, new_debouncer,
 };
 use tokio::{
     runtime::Handle,
     sync::{
         broadcast,
-        mpsc::{channel, Receiver},
+        mpsc::{Receiver, channel},
     },
 };
 

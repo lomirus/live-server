@@ -1,6 +1,6 @@
 use clap::Parser;
 use env_logger::Env;
-use live_server::{listen, Options};
+use live_server::{Options, listen};
 
 /// Launch a local network server with live reload feature for static pages.
 #[derive(Parser)]
