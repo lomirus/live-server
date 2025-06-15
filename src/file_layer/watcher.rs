@@ -46,8 +46,9 @@ pub async fn watch(
     tx: Arc<broadcast::Sender<()>>,
     ignore_files: bool,
 ) {
+    let root_parent = root_path.parent();
     debouncer
-        .watch(&root_path, RecursiveMode::Recursive)
+        .watch(&root_parent.unwrap_or(&root_path), RecursiveMode::Recursive)
         .unwrap();
 
     while let Some(result) = rx.recv().await {
@@ -55,6 +56,11 @@ pub async fn watch(
         match result {
             Ok(events) => {
                 for e in events {
+                    if  e.paths.iter().all(|p| !p.starts_with(&root_path)) {
+                        // All paths in this event are NOT related to the root path
+                        log::trace!("Skipped files that are not in root: {:?}", e.paths);
+                        continue;
+                    }
                     if ignore_files {
                         match e
                             .paths
