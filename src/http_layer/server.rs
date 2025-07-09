@@ -73,7 +73,7 @@ pub(crate) fn create_server(state: AppState) -> Router {
             "/live-server-ws",
             get(|ws: WebSocketUpgrade| async move {
                 ws.on_failed_upgrade(|error| {
-                    log::error!("Failed to upgrade websocket: {}", error);
+                    log::error!("Failed to upgrade websocket: {error}");
                 })
                 .on_upgrade(|socket: WebSocket| on_websocket_upgrade(socket, tx))
             }),
@@ -161,7 +161,7 @@ async fn static_assets(
     if is_accessing_dir {
         if !uri_path.ends_with('/') {
             // redirect so parent links work correctly
-            let redirect = format!("{}/", uri_path);
+            let redirect = format!("{uri_path}/");
             let mut headers = HeaderMap::new();
             headers.append(header::LOCATION, HeaderValue::from_str(&redirect).unwrap());
             return (StatusCode::TEMPORARY_REDIRECT, headers, Body::empty());
@@ -222,8 +222,8 @@ async fn static_assets(
                 _ => StatusCode::INTERNAL_SERVER_ERROR,
             };
             match path.to_str() {
-                Some(path) => log::warn!("Failed to read \"{}\": {}", path, err),
-                None => log::warn!("Failed to read file with invalid path: {}", err),
+                Some(path) => log::warn!("Failed to read \"{path}\": {err}"),
+                None => log::warn!("Failed to read file with invalid path: {err}"),
             }
             return (
                 status_code,
@@ -242,7 +242,7 @@ async fn static_assets(
         let text = match String::from_utf8(file) {
             Ok(text) => text,
             Err(err) => {
-                log::error!("Failed to read {:?} as utf-8: {}", path, err);
+                log::error!("Failed to read {path:?} as utf-8: {err}");
                 let html = generate_error_body(&err.to_string(), state.hard_reload, is_reload);
                 return (StatusCode::INTERNAL_SERVER_ERROR, headers, html);
             }
@@ -265,7 +265,7 @@ async fn static_assets(
 fn format_script(hard_reload: bool, is_reload: bool, is_error: bool) -> String {
     match (is_reload, is_error) {
         // successful reload, inject the reload payload
-        (true, false) => format!("<script>{}</script>", RELOAD_PAYLOAD),
+        (true, false) => format!("<script>{RELOAD_PAYLOAD}</script>"),
         // failed reload, don't inject anything so the client polls again
         (true, true) => String::new(),
         // normal connection, inject the websocket client

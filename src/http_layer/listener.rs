@@ -12,7 +12,7 @@ pub(crate) async fn create_listener(addr: &str) -> Result<TcpListener, String> {
                 true => match local_ip() {
                     Ok(addr) => addr,
                     Err(err) => {
-                        log::warn!("Failed to get local IP address: {}", err);
+                        log::warn!("Failed to get local IP address: {err}");
                         host
                     }
                 },
@@ -30,7 +30,7 @@ pub(crate) async fn create_listener(addr: &str) -> Result<TcpListener, String> {
             let err_msg = if let std::io::ErrorKind::AddrInUse = err.kind() {
                 format!("Address {} is already in use", &addr)
             } else {
-                format!("Failed to listen on {}: {}", addr, err)
+                format!("Failed to listen on {addr}: {err}")
             };
             log::error!("{err_msg}");
             Err(err_msg)

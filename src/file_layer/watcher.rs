@@ -30,7 +30,7 @@ pub(crate) async fn create_watcher() -> Result<
             let tx = tx.clone();
             rt.spawn(async move {
                 if let Err(err) = tx.send(result).await {
-                    log::error!("Failed to send event result: {}", err);
+                    log::error!("Failed to send event result: {err}");
                 }
             });
         },
@@ -85,7 +85,7 @@ pub async fn watch(
                     match e.event.kind {
                         Create(_) => {
                             let path = e.event.paths[0].to_str().unwrap();
-                            log::debug!("[CREATE] {}", path);
+                            log::debug!("[CREATE] {path}");
                             files_changed = true;
                         }
                         Modify(kind) => {
@@ -106,14 +106,14 @@ pub async fn watch(
                                 }
                                 _ => {
                                     let paths = e.event.paths[0].to_str().unwrap();
-                                    log::debug!("[UPDATE] {}", paths);
+                                    log::debug!("[UPDATE] {paths}");
                                     files_changed = true;
                                 }
                             }
                         }
                         Remove(_) => {
                             let paths = e.event.paths[0].to_str().unwrap();
-                            log::debug!("[REMOVE] {}", paths);
+                            log::debug!("[REMOVE] {paths}");
                             files_changed = true;
                         }
                         _ => {}
@@ -122,13 +122,13 @@ pub async fn watch(
             }
             Err(errors) => {
                 for err in errors {
-                    log::error!("{}", err);
+                    log::error!("{err}");
                 }
             }
         }
         if files_changed {
             if let Err(err) = tx.send(()) {
-                log::debug!("Failed to broadcast: {}", err);
+                log::debug!("Failed to broadcast: {err}");
             }
         }
     }

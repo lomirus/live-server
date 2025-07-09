@@ -141,7 +141,7 @@ fn get_absolute_path(path: &Path) -> Result<PathBuf, String> {
     match path.absolutize() {
         Ok(path) => Ok(path.to_path_buf()),
         Err(err) => {
-            let err_msg = format!("Failed to get absolute path of {:?}: {}", path, err);
+            let err_msg = format!("Failed to get absolute path of {path:?}: {err}");
             log::error!("{err_msg}");
             Err(err_msg)
         }
@@ -151,11 +151,11 @@ fn get_absolute_path(path: &Path) -> Result<PathBuf, String> {
 fn print_listening_on_path(path: &PathBuf) -> Result<(), String> {
     match path.as_os_str().to_str() {
         Some(path_str) => {
-            log::info!("Listening on {}", path_str);
+            log::info!("Listening on {path_str}");
             Ok(())
         }
         None => {
-            let err_msg = format!("Failed to parse path to string for `{:?}`", path);
+            let err_msg = format!("Failed to parse path to string for `{path:?}`");
             log::error!("{err_msg}");
             Err(err_msg)
         }

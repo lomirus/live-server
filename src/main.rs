@@ -51,7 +51,7 @@ async fn main() {
         ignore,
     } = Args::parse();
 
-    let addr = format!("{}:{}", host, port);
+    let addr = format!("{host}:{port}");
     let listener = listen(addr, root).await.unwrap();
 
     if let Some(page) = open {
