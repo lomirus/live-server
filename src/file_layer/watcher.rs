@@ -126,10 +126,8 @@ pub async fn watch(
                 }
             }
         }
-        if files_changed {
-            if let Err(err) = tx.send(()) {
-                log::debug!("Failed to broadcast: {err}");
-            }
+        if files_changed && let Err(err) = tx.send(()) {
+            log::debug!("Failed to broadcast: {err}");
         }
     }
 }
