@@ -21,6 +21,9 @@ struct Args {
     /// Open the page in browser automatically
     #[clap(short, long, value_name = "PAGE")]
     open: Option<Option<String>>,
+    /// Specify a particular browser to open the page with
+    #[clap(long, value_name = "PATH")]
+    browser: Option<String>,
     /// Hard reload the page on update instead of hot reload
     ///
     /// Try using this if the reload is not working as expected.
@@ -47,6 +50,7 @@ async fn main() {
         root,
         index,
         open,
+        browser,
         hard,
         ignore,
     } = Args::parse();
@@ -57,7 +61,11 @@ async fn main() {
     if let Some(page) = open {
         let origin = listener.link().unwrap();
         let path = page.unwrap_or_default();
-        open::that(format!("{origin}/{path}")).unwrap();
+        let url = format!("{origin}/{path}");
+        match browser {
+            Some(browser) => open::with(url, browser).unwrap(),
+            None => open::that(url).unwrap(),
+        }
     }
 
     listener
