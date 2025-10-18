@@ -20,13 +20,13 @@ mod utils;
 
 pub use http_layer::server::Options;
 
-use file_layer::watcher::{create_watcher, watch};
+use file_layer::watcher::{create_poll_watcher, watch};
 use http_layer::{
     listener::create_listener,
     server::{AppState, create_server, serve},
 };
 use local_ip_address::local_ip;
-use notify::RecommendedWatcher;
+use notify::{PollWatcher, RecommendedWatcher, Watcher};
 use notify_debouncer_full::{DebouncedEvent, Debouncer, RecommendedCache};
 use path_absolutize::Absolutize;
 use std::{
@@ -40,14 +40,16 @@ use tokio::{
     sync::{broadcast, mpsc::Receiver},
 };
 
-pub struct Listener {
+use crate::file_layer::watcher::create_recommended_watcher;
+
+pub struct Listener<W: Watcher> {
     tcp_listener: TcpListener,
     root_path: PathBuf,
-    debouncer: Debouncer<RecommendedWatcher, RecommendedCache>,
+    debouncer: Debouncer<W, RecommendedCache>,
     rx: Receiver<Result<Vec<DebouncedEvent>, Vec<notify::Error>>>,
 }
 
-impl Listener {
+impl<W: Watcher + Send + 'static> Listener<W> {
     /// Start live-server.
     ///
     /// ```
@@ -113,7 +115,7 @@ impl Listener {
     }
 }
 
-/// Create live-server listener
+/// Create live-server listener using [RecommendedWatcher].
 ///
 /// ```
 /// use live_server::{listen, Options};
@@ -122,9 +124,43 @@ impl Listener {
 ///     listen("127.0.0.1:8080", "./").await?.start(Options::default()).await
 /// }
 /// ```
-pub async fn listen(addr: impl AsRef<str>, root: impl AsRef<Path>) -> Result<Listener, String> {
+pub async fn listen(
+    addr: impl AsRef<str>,
+    root: impl AsRef<Path>,
+) -> Result<Listener<RecommendedWatcher>, String> {
     let tcp_listener = create_listener(addr.as_ref()).await?;
-    let (debouncer, rx) = create_watcher().await?;
+    let (debouncer, rx) = create_recommended_watcher().await?;
+
+    let abs_root = get_absolute_path(root.as_ref())?;
+    print_listening_on_path(&abs_root)?;
+
+    Ok(Listener {
+        tcp_listener,
+        debouncer,
+        root_path: abs_root,
+        rx,
+    })
+}
+
+/// Create live-server listener using [PollWatcher].
+///
+/// [PollWatcher] is a fallback that manually checks file paths for changes at a regular interval.
+/// It is useful for cases where real-time OS notifications fail, such as when a symbolic link is
+/// atomically replaced, or when the monitored directory itself is moved or renamed.
+///
+/// ```
+/// use live_server::{listen, Options};
+///
+/// async fn serve() -> Result<(), Box<dyn std::error::Error>> {
+///     listen_poll("127.0.0.1:8080", "./").await?.start(Options::default()).await
+/// }
+/// ```
+pub async fn listen_poll(
+    addr: impl AsRef<str>,
+    root: impl AsRef<Path>,
+) -> Result<Listener<PollWatcher>, String> {
+    let tcp_listener = create_listener(addr.as_ref()).await?;
+    let (debouncer, rx) = create_poll_watcher().await?;
 
     let abs_root = get_absolute_path(root.as_ref())?;
     print_listening_on_path(&abs_root)?;

@@ -1,6 +1,7 @@
 use clap::Parser;
 use env_logger::Env;
-use live_server::{Options, listen};
+use live_server::{Listener, Options, listen, listen_poll};
+use notify::Watcher;
 
 /// Launch a local network server with live reload feature for static pages.
 #[derive(Parser)]
@@ -37,32 +38,22 @@ struct Args {
     /// sub-directories won't work.
     #[clap(short = 'I', long)]
     ignore: bool,
+    /// Create listener using `PollWatcher`
+    ///
+    /// `PollWatcher` is a fallback that manually checks file paths for changes at a regular interval.
+    /// It is useful for cases where real-time OS notifications fail, such as when a symbolic link is
+    /// atomically replaced, or when the monitored directory itself is moved or renamed.
+    #[clap(long)]
+    poll: bool,
 }
 
-#[tokio::main]
-async fn main() {
-    let env = Env::new().default_filter_or("info");
-    env_logger::init_from_env(env);
-
-    let Args {
-        host,
-        port,
-        root,
-        index,
-        open,
-        browser,
-        hard,
-        ignore,
-    } = Args::parse();
-
-    let addr = format!("{host}:{port}");
-    let listener = listen(addr, root).await.unwrap();
-
-    if let Some(page) = open {
+// Workaround for https://github.com/rust-lang/rust/issues/63065
+async fn run_listener<W: Watcher + Send + 'static>(listener: Listener<W>, args: &Args) {
+    if let Some(page) = &args.open {
         let origin = listener.link().unwrap();
-        let path = page.unwrap_or_default();
+        let path = page.clone().unwrap_or_default();
         let url = format!("{origin}/{path}");
-        match browser {
+        match &args.browser {
             Some(browser) => open::with(url, browser).unwrap(),
             None => open::that(url).unwrap(),
         }
@@ -70,10 +61,30 @@ async fn main() {
 
     listener
         .start(Options {
-            hard_reload: hard,
-            index_listing: index,
-            auto_ignore: ignore,
+            hard_reload: args.hard,
+            index_listing: args.index,
+            auto_ignore: args.ignore,
         })
         .await
-        .unwrap();
+        .unwrap()
+}
+
+#[tokio::main]
+async fn main() {
+    let env = Env::new().default_filter_or("info");
+    env_logger::init_from_env(env);
+
+    let args = Args::parse();
+    let Args {
+        host, port, root, ..
+    } = &args;
+
+    let addr = format!("{host}:{port}");
+    if args.poll {
+        let listener = listen_poll(addr, root).await.unwrap();
+        run_listener(listener, &args).await;
+    } else {
+        let listener = listen(addr, root).await.unwrap();
+        run_listener(listener, &args).await;
+    };
 }
