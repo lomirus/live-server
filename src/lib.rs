@@ -149,7 +149,7 @@ pub async fn listen(
 /// atomically replaced, or when the monitored directory itself is moved or renamed.
 ///
 /// ```
-/// use live_server::{listen, Options};
+/// use live_server::{listen_poll, Options};
 ///
 /// async fn serve() -> Result<(), Box<dyn std::error::Error>> {
 ///     listen_poll("127.0.0.1:8080", "./").await?.start(Options::default()).await
