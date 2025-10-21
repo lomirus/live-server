@@ -1,6 +1,6 @@
 [package]
 name = "live-server"
-version = "0.10.1"
+version = "0.11.0"
 edition = "2024"
 authors = ["Lomirus"]
 description = "Launch a local network server with live reload feature for static pages."
