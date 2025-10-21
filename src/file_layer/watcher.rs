@@ -1,8 +1,9 @@
 use std::{path::PathBuf, sync::Arc, time::Duration};
 
-use notify::{Error, RecommendedWatcher, RecursiveMode};
+use notify::{Error, PollWatcher, RecommendedWatcher, RecursiveMode, Watcher};
 use notify_debouncer_full::{
-    DebounceEventResult, DebouncedEvent, Debouncer, RecommendedCache, new_debouncer,
+    DebounceEventResult, DebouncedEvent, Debouncer, NoCache, RecommendedCache, new_debouncer,
+    new_debouncer_opt,
 };
 use tokio::{
     runtime::Handle,
@@ -14,7 +15,34 @@ use tokio::{
 
 use crate::utils::{is_ignored, strip_prefix};
 
-pub(crate) async fn create_watcher() -> Result<
+pub(crate) async fn create_poll_watcher() -> Result<
+    (
+        Debouncer<PollWatcher, RecommendedCache>,
+        Receiver<Result<Vec<DebouncedEvent>, Vec<Error>>>,
+    ),
+    String,
+> {
+    let rt = Handle::current();
+    let (tx, rx) = channel::<Result<Vec<DebouncedEvent>, Vec<Error>>>(16);
+    new_debouncer_opt(
+        Duration::from_millis(200),
+        None,
+        move |result: DebounceEventResult| {
+            let tx = tx.clone();
+            rt.spawn(async move {
+                if let Err(err) = tx.send(result).await {
+                    log::error!("Failed to send event result: {err}");
+                }
+            });
+        },
+        NoCache,
+        notify::Config::default().with_poll_interval(Duration::from_millis(200)),
+    )
+    .map(|d| (d, rx))
+    .map_err(|e| e.to_string())
+}
+
+pub(crate) async fn create_recommended_watcher() -> Result<
     (
         Debouncer<RecommendedWatcher, RecommendedCache>,
         Receiver<Result<Vec<DebouncedEvent>, Vec<Error>>>,
@@ -39,16 +67,15 @@ pub(crate) async fn create_watcher() -> Result<
     .map_err(|e| e.to_string())
 }
 
-pub async fn watch(
+pub async fn watch<W: Watcher>(
     root_path: PathBuf,
-    mut debouncer: Debouncer<RecommendedWatcher, RecommendedCache>,
+    mut debouncer: Debouncer<W, RecommendedCache>,
     mut rx: Receiver<Result<Vec<DebouncedEvent>, Vec<Error>>>,
     tx: Arc<broadcast::Sender<()>>,
     ignore_files: bool,
 ) {
-    let root_parent = root_path.parent();
     debouncer
-        .watch(root_parent.unwrap_or(&root_path), RecursiveMode::Recursive)
+        .watch(&root_path, RecursiveMode::Recursive)
         .unwrap();
 
     while let Some(result) = rx.recv().await {
@@ -56,11 +83,6 @@ pub async fn watch(
         match result {
             Ok(events) => {
                 for e in events {
-                    if e.paths.iter().all(|p| !p.starts_with(&root_path)) {
-                        // All paths in this event are NOT related to the root path
-                        log::debug!("Skipped files that are not in root: {:?}", e.paths);
-                        continue;
-                    }
                     if ignore_files {
                         match e
                             .paths
