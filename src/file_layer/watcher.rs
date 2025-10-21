@@ -2,7 +2,7 @@ use std::{path::PathBuf, sync::Arc, time::Duration};
 
 use notify::{Error, PollWatcher, RecommendedWatcher, RecursiveMode, Watcher};
 use notify_debouncer_full::{
-    DebounceEventResult, DebouncedEvent, Debouncer, NoCache, RecommendedCache, new_debouncer,
+    DebounceEventResult, DebouncedEvent, Debouncer, RecommendedCache, new_debouncer,
     new_debouncer_opt,
 };
 use tokio::{
@@ -35,7 +35,7 @@ pub(crate) async fn create_poll_watcher() -> Result<
                 }
             });
         },
-        NoCache,
+        RecommendedCache::new(),
         notify::Config::default().with_poll_interval(Duration::from_millis(200)),
     )
     .map(|d| (d, rx))
