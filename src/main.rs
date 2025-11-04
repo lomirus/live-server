@@ -70,7 +70,7 @@ async fn run_listener<W: Watcher + Send + 'static>(listener: Listener<W>, args: 
 }
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), String> {
     let env = Env::new().default_filter_or("info");
     env_logger::init_from_env(env);
 
@@ -81,10 +81,11 @@ async fn main() {
 
     let addr = format!("{host}:{port}");
     if args.poll {
-        let listener = listen_poll(addr, root).await.unwrap();
+        let listener = listen_poll(addr, root).await?;
         run_listener(listener, &args).await;
     } else {
-        let listener = listen(addr, root).await.unwrap();
+        let listener = listen(addr, root).await?;
         run_listener(listener, &args).await;
     };
+    Ok(())
 }
