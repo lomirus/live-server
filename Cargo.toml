@@ -27,4 +27,4 @@ ignore = "*"
 path-absolutize = "*"
 
 [dev-dependencies]
-reqwest = "*"
+reqwest = { version = "*", default-features = false, features = ["rustls-tls"] }
