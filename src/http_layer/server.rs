@@ -3,7 +3,7 @@ use axum::{
     body::Body,
     extract::{
         Request, State, WebSocketUpgrade,
-        ws::{Message, WebSocket},
+        ws::{Message, Utf8Bytes, WebSocket},
     },
     http::{HeaderMap, HeaderValue, StatusCode, header},
     routing::get,
@@ -68,7 +68,7 @@ pub(crate) fn create_server(state: AppState) -> Router {
     let tx = state.tx.clone();
     Router::new()
         .route("/", get(static_assets))
-        .route("/*path", get(static_assets))
+        .route("/{*path}", get(static_assets))
         .route(
             "/live-server-ws",
             get(|ws: WebSocketUpgrade| async move {
@@ -86,7 +86,10 @@ async fn on_websocket_upgrade(socket: WebSocket, tx: Arc<broadcast::Sender<()>>)
     let mut rx = tx.subscribe();
     let mut send_task = tokio::spawn(async move {
         while rx.recv().await.is_ok() {
-            sender.send(Message::Text(String::new())).await.unwrap();
+            sender
+                .send(Message::Text(Utf8Bytes::default()))
+                .await
+                .unwrap();
         }
     });
     let mut recv_task =
