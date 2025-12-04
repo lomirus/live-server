@@ -1,17 +1,20 @@
+use get_port::{Ops as _, tcp::TcpPort};
 use live_server::{Options, listen};
 use reqwest::StatusCode;
 
+const HOST: &str = "127.0.0.1";
+
 #[tokio::test]
 async fn request() {
-    const HOST: &str = "127.0.0.1:8000";
+    let authority = format!("{HOST}:{}", TcpPort::any(HOST).unwrap());
 
-    let listener = listen(HOST, "./tests/page").await.unwrap();
+    let listener = listen(&authority, "./tests/page").await.unwrap();
     tokio::spawn(async {
         listener.start(Options::default()).await.unwrap();
     });
 
     // Test requesting index.html
-    let response = reqwest::get(format!("http://{HOST}")).await.unwrap();
+    let response = reqwest::get(format!("http://{authority}")).await.unwrap();
 
     assert_eq!(response.status(), StatusCode::OK);
 
@@ -29,7 +32,7 @@ async fn request() {
     assert!(text.contains("<script>"));
 
     // Test requesting index.js
-    let response = reqwest::get(format!("http://{HOST}/index.js"))
+    let response = reqwest::get(format!("http://{authority}/index.js"))
         .await
         .unwrap();
 
@@ -43,7 +46,7 @@ async fn request() {
     assert_eq!(text, target_text);
 
     // Test requesting non-existent html file
-    let response = reqwest::get(format!("http://{HOST}/404.html"))
+    let response = reqwest::get(format!("http://{authority}/404.html"))
         .await
         .unwrap();
 
@@ -56,7 +59,7 @@ async fn request() {
     assert!(text.starts_with("<!DOCTYPE html>"));
 
     // Test requesting non-existent asset
-    let response = reqwest::get(format!("http://{HOST}/favicon.ico"))
+    let response = reqwest::get(format!("http://{authority}/favicon.ico"))
         .await
         .unwrap();
 
@@ -66,7 +69,9 @@ async fn request() {
     assert_eq!(content_type, "image/x-icon");
 
     // Test requesting with reload query
-    let response = reqwest::get(format!("http://{HOST}?reload")).await.unwrap();
+    let response = reqwest::get(format!("http://{authority}?reload"))
+        .await
+        .unwrap();
 
     assert_eq!(response.status(), StatusCode::OK);
 
@@ -83,7 +88,7 @@ async fn request() {
     assert_eq!(text, target_text);
 
     // Test requesting non-existent html file with reload query does not inject script
-    let response = reqwest::get(format!("http://{HOST}/404.html?reload"))
+    let response = reqwest::get(format!("http://{authority}/404.html?reload"))
         .await
         .unwrap();
 
@@ -98,9 +103,9 @@ async fn request() {
 
 #[tokio::test]
 async fn disable_index_listing() {
-    const HOST: &str = "127.0.0.1:8001";
+    let authority = format!("{HOST}:{}", TcpPort::any(HOST).unwrap());
 
-    let listener = listen(HOST, "./tests/empty_index").await.unwrap();
+    let listener = listen(&authority, "./tests/empty_index").await.unwrap();
     tokio::spawn(async {
         listener
             .start(Options {
@@ -113,7 +118,7 @@ async fn disable_index_listing() {
     });
 
     // Test requesting index.html
-    let response = reqwest::get(format!("http://{HOST}")).await.unwrap();
+    let response = reqwest::get(format!("http://{authority}")).await.unwrap();
     assert_eq!(response.status(), StatusCode::NOT_FOUND);
 
     let content_type = response.headers().get("content-type").unwrap();
@@ -126,9 +131,9 @@ async fn disable_index_listing() {
 
 #[tokio::test]
 async fn enable_index_listing() {
-    const HOST: &str = "127.0.0.1:8002";
+    let authority = format!("{HOST}:{}", TcpPort::any(HOST).unwrap());
 
-    let listener = listen(HOST, "./tests/empty_index").await.unwrap();
+    let listener = listen(&authority, "./tests/empty_index").await.unwrap();
     tokio::spawn(async {
         listener
             .start(Options {
@@ -141,7 +146,7 @@ async fn enable_index_listing() {
     });
 
     // Test requesting index.html
-    let response = reqwest::get(format!("http://{HOST}")).await.unwrap();
+    let response = reqwest::get(format!("http://{authority}")).await.unwrap();
     assert_eq!(response.status(), StatusCode::OK);
 
     let content_type = response.headers().get("content-type").unwrap();
