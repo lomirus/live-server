@@ -25,6 +25,10 @@ mime_guess = "2.0.5"
 open = "5.3.3"
 ignore = "0.4.25"
 path-absolutize = "3.1.1"
+symlink = "0.1.0"
 
 [dev-dependencies]
+chromiumoxide = "0.8.0"
+get-port = "4.0.0"
 reqwest = "0.12.4"
+tempfile = "3.23.0"
