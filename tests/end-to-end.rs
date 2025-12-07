@@ -11,6 +11,7 @@ use chromiumoxide::{
 };
 use futures::StreamExt as _;
 use get_port::{Ops, tcp::TcpPort};
+use symlink::symlink_dir;
 use tempfile::{self, TempDir, tempdir};
 use tokio::{
     fs,
@@ -115,6 +116,48 @@ async fn browser_reloads_on_file_change() {
         .iter()
         .collect::<PathBuf>();
     fs::write(index_path, index_with("modified")).await.unwrap();
+
+    with_timeout(frame_stopped_loading_event_stream.next())
+        .await
+        .unwrap()
+        .unwrap();
+
+    let title = page.get_title().await.unwrap().unwrap();
+    assert_eq!(title, "modified");
+}
+
+#[tokio::test]
+async fn browser_reloads_on_symlink_swap() {
+    let fixture = fixture_with("initial").await;
+    let symlink_parent = tempdir().unwrap();
+    let symlink_path = [symlink_parent.path(), Path::new("symlink")]
+        .iter()
+        .collect::<PathBuf>();
+    symlink_dir(&fixture, &symlink_path).unwrap();
+    let (_subject, authority) =
+        subject_with(&["--poll", symlink_path.as_os_str().to_str().unwrap()]);
+    let (browser, _browser_dir) = fresh_browser().await;
+
+    let page = browser
+        .new_page(format!("http://{authority}/"))
+        .await
+        .unwrap();
+
+    page.wait_for_navigation().await.unwrap();
+    let title = page.get_title().await.unwrap().unwrap();
+    assert_eq!(title, "initial");
+
+    let mut frame_stopped_loading_event_stream = page
+        .event_listener::<EventFrameStoppedLoading>()
+        .await
+        .unwrap();
+
+    let temp_symlink_path = [symlink_parent.path(), Path::new("temp-symlink")]
+        .iter()
+        .collect::<PathBuf>();
+    let fixture = fixture_with("modified").await;
+    symlink_dir(&fixture, &temp_symlink_path).unwrap();
+    fs::rename(&temp_symlink_path, &symlink_path).await.unwrap();
 
     with_timeout(frame_stopped_loading_event_stream.next())
         .await
