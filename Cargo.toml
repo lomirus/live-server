@@ -19,7 +19,7 @@ log = "0.4.28"
 env_logger = "0.10.2"
 notify-debouncer-full = "0.6.0"
 tokio = { version = "1.48.0", features = ["full"] }
-axum = { version = "0.7.6", features = ["ws"]}
+axum = { version = "0.8.7", features = ["ws"]}
 futures = "0.3.31"
 mime_guess = "2.0.5"
 open = "5.3.3"
