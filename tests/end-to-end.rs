@@ -73,6 +73,7 @@ async fn fixture_with(title: &str) -> TempDir {
 }
 
 #[tokio::test]
+#[serial_test::serial]
 async fn page_content_is_served() {
     let fixture = fixture_with("some page").await;
     let (_subject, authority) = subject_with(&[fixture.path()]);
@@ -92,6 +93,7 @@ async fn page_content_is_served() {
 }
 
 #[tokio::test]
+#[serial_test::serial]
 async fn browser_reloads_on_file_change() {
     let fixture = fixture_with("initial").await;
     let (_subject, authority) = subject_with(&[fixture.path()]);
