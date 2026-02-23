@@ -31,4 +31,4 @@ chromiumoxide = "0.8.0"
 get-port = "4.0.0"
 reqwest = { version = "0.12.9", default-features = false, features = ["rustls-tls"] }
 tempfile = "3.25.0"
-serial_test = "3.2.0"
+serial_test = "3.4.0"
