@@ -16,7 +16,7 @@ notify = "8.2.0"
 clap = { version = "4.6.0", features = ["derive"] }
 local-ip-address = "0.6.10"
 log = "0.4.29"
-env_logger = "0.10.2"
+env_logger = "0.11.9"
 notify-debouncer-full = "0.7.0"
 tokio = { version = "1.50.0", features = ["full"] }
 axum = { version = "0.8.8", features = ["ws"]}
