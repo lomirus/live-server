@@ -52,11 +52,7 @@ async fn fresh_browser() -> (Browser, TempDir) {
         .launch_timeout(Duration::from_secs(60))
         .build()
         .unwrap();
-    let (browser, handler) = Browser::launch(
-        config,
-    )
-    .await
-    .unwrap();
+    let (browser, handler) = Browser::launch(config).await.unwrap();
     tokio::spawn(async move {
         handler.for_each(async |_| {}).await;
     });
