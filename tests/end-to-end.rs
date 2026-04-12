@@ -45,11 +45,15 @@ fn subject_with(args: &[impl AsRef<OsStr>]) -> (Child, String) {
 
 async fn fresh_browser() -> (Browser, TempDir) {
     let data_dir = tempdir().unwrap();
+    // GitHub's Windows runners can take longer than chromiumoxide's default
+    // 20-second launch timeout to expose the DevTools websocket URL.
+    let config = BrowserConfig::builder()
+        .user_data_dir(data_dir.path())
+        .launch_timeout(Duration::from_secs(60))
+        .build()
+        .unwrap();
     let (browser, handler) = Browser::launch(
-        BrowserConfig::builder()
-            .user_data_dir(data_dir.path())
-            .build()
-            .unwrap(),
+        config,
     )
     .await
     .unwrap();
