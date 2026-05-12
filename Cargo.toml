@@ -22,7 +22,7 @@ tokio = { version = "1.52.2", features = ["full"] }
 axum = { version = "0.8.9", features = ["ws"]}
 futures = "0.3.32"
 mime_guess = "2.0.5"
-open = "5.3.4"
+open = "5.3.5"
 ignore = "0.4.25"
 path-absolutize = "3.1.1"
 
