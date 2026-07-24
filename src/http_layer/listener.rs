@@ -28,7 +28,7 @@ pub(crate) async fn create_listener(addr: &str) -> Result<TcpListener, String> {
         }
         Err(err) => {
             let err_msg = if let std::io::ErrorKind::AddrInUse = err.kind() {
-                format!("Address {} is already in use", &addr)
+                format!("Address {} is already in use", addr)
             } else {
                 format!("Failed to listen on {addr}: {err}")
             };
