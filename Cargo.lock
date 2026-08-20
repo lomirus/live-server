@@ -1006,6 +1006,7 @@ dependencies = [
  "notify-debouncer-full",
  "open",
  "path-absolutize",
+ "percent-encoding",
  "reqwest 0.12.9",
  "serial_test",
  "tempfile",
