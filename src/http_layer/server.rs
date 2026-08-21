@@ -10,10 +10,11 @@ use axum::{
 };
 use futures::{sink::SinkExt, stream::StreamExt};
 use mime_guess::mime;
+use percent_encoding::{AsciiSet, CONTROLS, percent_decode_str, utf8_percent_encode};
 use std::{
     fs,
     io::ErrorKind,
-    path::{Path, PathBuf},
+    path::{Component, Path, PathBuf},
     sync::Arc,
 };
 use tokio::{net::TcpListener, sync::broadcast};
@@ -29,6 +30,26 @@ const WEBSOCKET_FUNCTION: &str = include_str!("../templates/websocket.js");
 /// JS script to inject to the HTML on reload so the client
 /// knows it's a successful reload.
 const RELOAD_PAYLOAD: &str = include_str!("../templates/reload.js");
+
+/// Characters that must be escaped when a file name is used as one URL path segment.
+const PATH_SEGMENT_ENCODE_SET: &AsciiSet = &CONTROLS
+    .add(b' ')
+    .add(b'"')
+    .add(b'#')
+    .add(b'%')
+    .add(b'&')
+    .add(b'/')
+    .add(b'<')
+    .add(b'>')
+    .add(b'?')
+    .add(b'[')
+    .add(b'\\')
+    .add(b']')
+    .add(b'^')
+    .add(b'`')
+    .add(b'{')
+    .add(b'|')
+    .add(b'}');
 
 pub(crate) async fn serve(tcp_listener: TcpListener, router: Router) {
     axum::serve(tcp_listener, router).await.unwrap();
@@ -100,10 +121,9 @@ async fn on_websocket_upgrade(socket: WebSocket, tx: Arc<broadcast::Sender<()>>)
     };
 }
 
-fn get_index_listing(uri_path: &str, root: &Path, auto_ignore: bool) -> String {
+fn get_index_listing(uri_path: &str, root: &Path, directory: &Path, auto_ignore: bool) -> String {
     let is_root = uri_path == "/";
-    let path = root.join(&uri_path[1..]);
-    let entries = fs::read_dir(path).unwrap();
+    let entries = fs::read_dir(directory).unwrap();
     let mut entry_names = entries
         .into_iter()
         .filter_map(|e| {
@@ -139,9 +159,44 @@ fn get_index_listing(uri_path: &str, root: &Path, auto_ignore: bool) -> String {
     }
     entry_names
         .into_iter()
-        .map(|en| format!("<li><a href=\"{en}\">{en}</a></li>"))
+        .map(|entry_name| {
+            let (name, trailing) = match entry_name.strip_suffix('/') {
+                Some(name) => (name, "/"),
+                None => (entry_name.as_str(), ""),
+            };
+            let href = utf8_percent_encode(name, PATH_SEGMENT_ENCODE_SET);
+            let label = escape_html(&entry_name);
+            format!("<li><a href=\"{href}{trailing}\">{label}</a></li>")
+        })
         .collect::<Vec<String>>()
         .join("\n")
+}
+
+fn escape_html(text: &str) -> String {
+    text.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+}
+
+/// Decode each URL path segment independently and reject anything that would become
+/// an absolute path, a parent path, or multiple filesystem path components.
+fn decode_uri_path(uri_path: &str) -> Result<PathBuf, &'static str> {
+    let mut decoded_path = PathBuf::new();
+
+    for encoded_segment in uri_path.split('/').skip(1).filter(|s| !s.is_empty()) {
+        let segment = percent_decode_str(encoded_segment)
+            .decode_utf8()
+            .map_err(|_| "URL path contains invalid UTF-8")?;
+        let mut components = Path::new(segment.as_ref()).components();
+
+        match (components.next(), components.next()) {
+            (Some(Component::Normal(name)), None) => decoded_path.push(name),
+            (Some(Component::CurDir), None) => {}
+            _ => return Err("URL path contains an invalid path segment"),
+        }
+    }
+
+    Ok(decoded_path)
 }
 
 async fn static_assets(
@@ -159,18 +214,27 @@ async fn static_assets(
         headers.append(header::LOCATION, HeaderValue::from_str(&redirect).unwrap());
         return (StatusCode::TEMPORARY_REDIRECT, headers, Body::empty());
     }
-    let mut path = state.root.join(&uri_path[1..]);
-    let is_accessing_dir = path.is_dir();
-    if is_accessing_dir {
-        if !uri_path.ends_with('/') {
-            // redirect so parent links work correctly
-            let redirect = format!("{uri_path}/");
-            let mut headers = HeaderMap::new();
-            headers.append(header::LOCATION, HeaderValue::from_str(&redirect).unwrap());
-            return (StatusCode::TEMPORARY_REDIRECT, headers, Body::empty());
+    let relative_path = match decode_uri_path(uri_path) {
+        Ok(path) => path,
+        Err(err_msg) => {
+            let body = generate_error_body(err_msg, state.hard_reload, is_reload);
+            return (StatusCode::BAD_REQUEST, HeaderMap::new(), body);
         }
-        path.push("index.html");
+    };
+    let requested_path = state.root.join(relative_path);
+    let is_accessing_dir = requested_path.is_dir();
+    if is_accessing_dir && !uri_path.ends_with('/') {
+        // redirect so parent links work correctly
+        let redirect = format!("{uri_path}/");
+        let mut headers = HeaderMap::new();
+        headers.append(header::LOCATION, HeaderValue::from_str(&redirect).unwrap());
+        return (StatusCode::TEMPORARY_REDIRECT, headers, Body::empty());
     }
+    let path = if is_accessing_dir {
+        requested_path.join("index.html")
+    } else {
+        requested_path.clone()
+    };
     let mime = mime_guess::from_path(&path).first_or_text_plain();
 
     let mut headers = HeaderMap::new();
@@ -216,7 +280,12 @@ async fn static_assets(
                         let html = index_html(
                             uri_path,
                             &script,
-                            &get_index_listing(uri_path, &state.root, state.auto_ignore),
+                            &get_index_listing(
+                                uri_path,
+                                &state.root,
+                                &requested_path,
+                                state.auto_ignore,
+                            ),
                         );
                         return (StatusCode::OK, headers, html);
                     }
